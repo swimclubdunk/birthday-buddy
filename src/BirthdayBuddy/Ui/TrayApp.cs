@@ -51,7 +51,10 @@ public sealed class TrayApp : ApplicationContext
         _library.Changed += (_, _) => RefreshTooltip();
         instance.OnActivationRequested(ShowWindow, SynchronizationContext.Current!);
         BuildMenu();
-        _reminders.Start();
+        // Launched at login: give the tray area a moment, or the first toast can be dropped
+        // while its "sent" marker is still saved.
+        _reminders.Start(startInTray ? TimeSpan.FromSeconds(15) : TimeSpan.Zero);
+        RefreshTooltip();
 
         if (loaded.RecoveredFrom is not null)
             _notifier.ShowMessage("Birthday Buddy",

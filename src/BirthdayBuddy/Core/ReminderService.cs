@@ -19,7 +19,8 @@ public sealed class ReminderService(Library library, Action<IReadOnlyList<Remind
     public event EventHandler? Checked;
 
     /// <summary>Call on the UI thread once the app is ready.</summary>
-    public void Start()
+    /// <param name="initialDelay">Wait before the first check, e.g. at login while the tray area is still starting.</param>
+    public void Start(TimeSpan initialDelay = default)
     {
         _ui = SynchronizationContext.Current ?? throw new InvalidOperationException("Start must run on the UI thread.");
         _timer = new System.Windows.Forms.Timer();
@@ -27,6 +28,13 @@ public sealed class ReminderService(Library library, Action<IReadOnlyList<Remind
         SystemEvents.PowerModeChanged += OnPowerModeChanged;
         SystemEvents.TimeChanged += OnTimeChanged;
         library.Changed += OnLibraryChanged;
+
+        if (initialDelay > TimeSpan.Zero)
+        {
+            _timer.Interval = (int)initialDelay.TotalMilliseconds;
+            _timer.Start();
+            return;
+        }
         Run();
     }
 

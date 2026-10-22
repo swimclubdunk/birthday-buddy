@@ -61,4 +61,24 @@ public class ReminderServiceTests : IDisposable
         var local = new DateTimeOffset(DateTime.Parse(now, CultureInfo.InvariantCulture), TimeSpan.Zero);
         Assert.Equal(expectedSeconds, ReminderService.NextCheckDelay(local).TotalSeconds);
     }
+
+    [Fact]
+    public void Start_checks_immediately_by_default() => Sta.Run(() =>
+    {
+        SynchronizationContext.SetSynchronizationContext(new System.Windows.Forms.WindowsFormsSynchronizationContext());
+        using var service = Create(P(22, 10));
+        service.Start();
+        Assert.Single(_sent);
+    });
+
+    // Final review: at login the tray may not be ready, and a dropped toast would still burn today's marker.
+    [Fact]
+    public void Start_with_an_initial_delay_does_not_check_yet() => Sta.Run(() =>
+    {
+        SynchronizationContext.SetSynchronizationContext(new System.Windows.Forms.WindowsFormsSynchronizationContext());
+        using var service = Create(P(22, 10));
+        service.Start(TimeSpan.FromSeconds(15));
+        Assert.Empty(_sent);
+        Assert.Null(new BirthdayStore(_dir.Path).Load().Data.People.SingleOrDefault()?.LastBirthdayNotice);
+    });
 }
