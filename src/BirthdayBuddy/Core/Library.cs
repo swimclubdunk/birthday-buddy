@@ -1,7 +1,8 @@
 namespace BirthdayBuddy.Core;
 
 /// <summary>The live birthday library: in-memory data, saved on every change.</summary>
-public sealed class Library(BirthdayStore store, AppData data)
+/// <param name="readOnly">Keep changes in memory only, e.g. when the file couldn't be opened and mustn't be overwritten.</param>
+public sealed class Library(BirthdayStore store, AppData data, bool readOnly = false)
 {
     public AppData Data { get; private set; } = data;
 
@@ -24,7 +25,7 @@ public sealed class Library(BirthdayStore store, AppData data)
     void Commit(AppData next, bool notify)
     {
         Data = next;
-        try
+        if (!readOnly) try
         {
             store.Save(next);
         }

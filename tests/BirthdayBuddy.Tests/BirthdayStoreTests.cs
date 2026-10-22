@@ -103,4 +103,35 @@ public class BirthdayStoreTests : IDisposable
         Store().Save(new AppData { People = [sam, sam with { Name = "Copy" }] });
         Assert.Equal("Sam", Assert.Single(Store().Load().Data.People).Name);
     }
+
+    // Final review I1: an antivirus/backup lock at login must not make the list look lost.
+    [Fact]
+    public void Locked_file_is_left_alone_and_reported_unavailable()
+    {
+        Store().Save(new AppData { People = [P(24, 10)] });
+        var original = File.ReadAllText(Store().FilePath);
+
+        LoadResult result;
+        using (new FileStream(Store().FilePath, FileMode.Open, FileAccess.Read, FileShare.None))
+            result = Store().Load();
+
+        Assert.True(result.Unavailable);
+        Assert.Null(result.RecoveredFrom);
+        Assert.Equal(original, File.ReadAllText(Store().FilePath));
+        Assert.Empty(Directory.GetFiles(_dir.Path, "birthdays.corrupt-*"));
+    }
+
+    // Final review I1: if a corrupt file can't be moved aside, loading must not throw (it would crash every launch).
+    [Fact]
+    public void Corrupt_file_that_cannot_be_moved_does_not_throw()
+    {
+        File.WriteAllText(Store().FilePath, "{ not json");
+
+        LoadResult result;
+        using (new FileStream(Store().FilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            result = Store().Load();
+
+        Assert.True(result.Unavailable);
+        Assert.Equal("{ not json", File.ReadAllText(Store().FilePath));
+    }
 }

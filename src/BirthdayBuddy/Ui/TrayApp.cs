@@ -20,7 +20,7 @@ public sealed class TrayApp : ApplicationContext
     {
         var store = new BirthdayStore(BirthdayStore.DefaultDirectory);
         var loaded = store.Load();
-        _library = new Library(store, loaded.Data);
+        _library = new Library(store, loaded.Data, readOnly: loaded.Unavailable);
 
         _boldMenuFont = new Font(_menu.Font, FontStyle.Bold);
         _menu.Opening += (_, e) =>
@@ -56,6 +56,9 @@ public sealed class TrayApp : ApplicationContext
         if (loaded.RecoveredFrom is not null)
             _notifier.ShowMessage("Birthday Buddy",
                 $"Your birthday list couldn't be read, so a fresh one was started. The old file was kept as {Path.GetFileName(loaded.RecoveredFrom)}.");
+        else if (loaded.Unavailable)
+            _notifier.ShowMessage("Birthday Buddy",
+                "Your birthday list couldn't be opened right now. Nothing was changed; restart Birthday Buddy to try again.");
 
         if (!startInTray) ShowWindow();
     }

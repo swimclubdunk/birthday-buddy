@@ -68,4 +68,14 @@ public class LibraryTests : IDisposable
         Assert.Equal(D(2026, 10, 24), Assert.Single(Store().Load().Data.People).LastHeadsUp);
         Assert.Equal(0, changes());
     }
+
+    // Final review I1: when the file couldn't be opened, never overwrite it.
+    [Fact]
+    public void Read_only_library_keeps_changes_in_memory_without_saving()
+    {
+        var library = new Library(Store(), new AppData(), readOnly: true);
+        library.Upsert(P(24, 10));
+        Assert.Single(library.Data.People);
+        Assert.False(File.Exists(Store().FilePath));
+    }
 }
