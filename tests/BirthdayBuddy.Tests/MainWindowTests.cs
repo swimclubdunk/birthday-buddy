@@ -15,11 +15,11 @@ public class MainWindowTests
 
     static Button ButtonNamed(Control root, string text) => All<Button>(root).Single(b => b.Text == text);
 
-    static void InWindow(Action<MainWindow, Library, FakeTimeProvider> test) => Sta.Run(() =>
+    static void InWindow(Action<MainWindow, Library, FakeTimeProvider> test, params Person[] people) => Sta.Run(() =>
     {
         SynchronizationContext.SetSynchronizationContext(new WindowsFormsSynchronizationContext());
         using var dir = new TempDirectory();
-        var library = new Library(new BirthdayStore(dir.Path), new AppData());
+        var library = new Library(new BirthdayStore(dir.Path), new AppData { People = people });
         var time = new FakeTimeProvider();
         using var window = new MainWindow(library, _ => true, () => D(2026, 10, 22), time)
         {
@@ -64,5 +64,46 @@ public class MainWindowTests
         Application.DoEvents();
         Assert.Equal(9, library.Data.Settings.HeadsUpDays);
         Assert.Equal(1, changes);
+    });
+
+    static TextBox SearchBox(Control root) => All<TextBox>(root).Single(t => t.PlaceholderText == "Search names");
+
+    [Fact]
+    public void Typing_in_search_filters_the_list() => InWindow((window, _, _) =>
+    {
+        var list = All<PeopleList>(window).Single();
+        Assert.Equal(3, list.Items.Count);
+
+        SearchBox(window).Text = "sa";
+        Application.DoEvents();
+
+        Assert.Equal(new[] { "Sam", "Samira" }, list.Items.Cast<Person>().Select(p => p.Name).Order());
+    }, P(24, 10, name: "Sam"), P(1, 1, name: "Alex"), P(5, 5, name: "Samira"));
+
+    [Fact]
+    public void Search_with_no_match_says_so() => InWindow((window, _, _) =>
+    {
+        SearchBox(window).Text = "zz";
+        Application.DoEvents();
+
+        Assert.False(All<PeopleList>(window).Single().Visible);
+        Assert.Contains(All<Label>(window), l => l.Visible && l.Text == "No one matches “zz”");
+    }, P(24, 10, name: "Sam"));
+
+    [Fact]
+    public void Search_is_hidden_while_the_library_is_empty() => InWindow((window, _, _) =>
+        Assert.False(SearchBox(window).Visible));
+
+    [Fact]
+    public void Window_resizes_but_not_below_its_minimum() => InWindow((window, _, _) =>
+    {
+        Assert.Equal(FormBorderStyle.Sizable, window.FormBorderStyle);
+        Assert.True(window.MaximizeBox);
+
+        window.Size = new Size(100, 100);
+        Assert.Equal(window.MinimumSize, window.Size);
+
+        window.Size = window.MinimumSize + new Size(300, 300);
+        Assert.Equal(window.MinimumSize + new Size(300, 300), window.Size);
     });
 }

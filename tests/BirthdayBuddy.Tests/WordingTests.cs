@@ -84,6 +84,9 @@ public class WordingTests
     public void Upcoming_line() => Assert.Equal("Sam · in 3 days", Wording.UpcomingLine(P(25, 10), 3));
 
     [Fact]
+    public void No_match_quotes_the_trimmed_query() => Assert.Equal("No one matches “zz”", Wording.NoMatch("  zz "));
+
+    [Fact]
     public void Subtitle_variants()
     {
         Assert.Equal("No birthdays yet", Wording.Subtitle([], Today));

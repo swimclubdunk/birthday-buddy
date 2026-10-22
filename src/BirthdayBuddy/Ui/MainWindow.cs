@@ -18,6 +18,8 @@ public sealed class MainWindow : Form
     readonly CheckBox _startup = new() { Text = "Start with Windows", AutoSize = true, Font = Theme.Body, Margin = new Padding(0, 8, 0, 0) };
     readonly Label _note = Widgets.Label(role: Role.Error, font: Theme.Small);
     readonly Button _emptyAdd = Widgets.Button("Add your first birthday", Role.PrimaryButton);
+    readonly TextBox _search = new() { PlaceholderText = "Search names", Font = Theme.Body, BorderStyle = BorderStyle.FixedSingle, Anchor = AnchorStyles.Left | AnchorStyles.Right, Margin = new Padding(0, 12, 0, 0) };
+    readonly Label _noMatch = new() { Dock = DockStyle.Fill, AutoSize = false, TextAlign = ContentAlignment.MiddleCenter, Font = Theme.Body, Tag = Role.Subtle, UseMnemonic = false, AutoEllipsis = true };
     readonly Debouncer _headsUpCommit;
     bool _syncing;
 
@@ -38,12 +40,11 @@ public sealed class MainWindow : Form
         AutoScaleMode = AutoScaleMode.Dpi;
         AutoScaleDimensions = new SizeF(96f, 96f);
         ClientSize = new Size(420, 520);
-        FormBorderStyle = FormBorderStyle.FixedSingle;
-        MaximizeBox = false;
+        MinimumSize = new Size(360, 420);
         StartPosition = FormStartPosition.CenterScreen;
         Font = Theme.Body;
 
-        // Header: title + subtitle on the left, Add on the right.
+        // Header: title + subtitle on the left, Add on the right, search underneath.
         var title = Widgets.Label("Birthday Buddy", font: Theme.Title);
         title.Margin = new Padding(0);
         _subtitle.AutoSize = false;
@@ -52,13 +53,15 @@ public sealed class MainWindow : Form
         _subtitle.Anchor = AnchorStyles.Left | AnchorStyles.Right;
         _subtitle.Margin = new Padding(1, 2, 8, 0);
         _add.Anchor = AnchorStyles.Right;
-        var header = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, ColumnCount = 2, RowCount = 2, Padding = new Padding(20, 18, 20, 12) };
+        var header = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, ColumnCount = 2, RowCount = 3, Padding = new Padding(20, 18, 20, 12) };
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         header.Controls.Add(title, 0, 0);
         header.Controls.Add(_subtitle, 0, 1);
         header.Controls.Add(_add, 1, 0);
         header.SetRowSpan(_add, 2);
+        header.Controls.Add(_search, 0, 2);
+        header.SetColumnSpan(_search, 2);
 
         // Empty state.
         var emptyTitle = Widgets.Label("No birthdays yet", font: Theme.Heading);
@@ -85,7 +88,7 @@ public sealed class MainWindow : Form
         var divider = new Panel { Dock = DockStyle.Bottom, Height = 1, Tag = Role.Border };
 
         var body = new Panel { Dock = DockStyle.Fill };
-        body.Controls.AddRange([_list, _empty, _editor]);
+        body.Controls.AddRange([_list, _empty, _noMatch, _editor]);
 
         // Docking runs in reverse add order: header and footer claim their edges, body fills the rest.
         Controls.Add(body);
@@ -104,6 +107,7 @@ public sealed class MainWindow : Form
             if (!_syncing) _headsUpCommit.Trigger();
         };
         _startup.CheckedChanged += (_, _) => OnStartupToggled();
+        _search.TextChanged += (_, _) => RefreshContent();
         _library.Changed += OnLibraryChanged;
     }
 
@@ -118,7 +122,9 @@ public sealed class MainWindow : Form
     {
         _list.Visible = false;
         _empty.Visible = false;
+        _noMatch.Visible = false;
         _add.Visible = false;
+        _search.Visible = false;
         _editor.Visible = true;
         if (person is null) _editor.BeginAdd();
         else _editor.BeginEdit(person);
@@ -130,6 +136,7 @@ public sealed class MainWindow : Form
         _editor.Visible = false;
         RefreshContent();
         if (_list.Visible) _list.Focus();
+        else if (_search.Visible) _search.Focus();
         else _emptyAdd.Focus();
     }
 
@@ -144,13 +151,22 @@ public sealed class MainWindow : Form
     {
         var today = _today();
         var people = BirthdayCalendar.Upcoming(_library.Data.People, today);
-        _list.SetPeople(people, today);
-        _subtitle.Text = Wording.Subtitle(people, today);
+        if (people.Count == 0 && _search.Text.Length > 0)
+        {
+            _search.Text = ""; // re-enters via TextChanged with a clean filter
+            return;
+        }
+        var shown = people.Where(p => PeopleFilter.Matches(p, _search.Text)).ToList();
+        _list.SetPeople(shown, today);
+        _subtitle.Text = Wording.Subtitle(people, today); // about everyone, not just the search results
 
         if (!_editor.Visible)
         {
-            _list.Visible = people.Count > 0;
+            _list.Visible = shown.Count > 0;
             _empty.Visible = people.Count == 0;
+            _noMatch.Visible = people.Count > 0 && shown.Count == 0;
+            _noMatch.Text = Wording.NoMatch(_search.Text);
+            _search.Visible = people.Count > 0;
         }
         _add.Visible = !_editor.Visible && people.Count > 0; // the empty state has its own button
 
@@ -210,7 +226,8 @@ public sealed class MainWindow : Form
     {
         if (keyData == Keys.Escape && !_editor.Visible)
         {
-            Hide();
+            if (_search.Text.Length > 0) _search.Clear(); // first Esc clears the search, the next one hides
+            else Hide();
             return true;
         }
         return base.ProcessCmdKey(ref msg, keyData);

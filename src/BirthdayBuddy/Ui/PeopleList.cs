@@ -48,6 +48,13 @@ public sealed class PeopleList : ListBox
         ItemHeight = LogicalToDeviceUnits(RowHeight);
     }
 
+    // Cards span the full width, so a resize must repaint every row, not just the newly exposed strip.
+    protected override void OnResize(EventArgs e)
+    {
+        base.OnResize(e);
+        Invalidate();
+    }
+
     protected override void OnDpiChangedAfterParent(EventArgs e)
     {
         base.OnDpiChangedAfterParent(e);
@@ -66,7 +73,7 @@ public sealed class PeopleList : ListBox
         bool highlighted = e.Index == _hover || (Focused && (e.State & DrawItemState.Selected) != 0);
 
         using (var path = Shapes.RoundedRect(card, LogicalToDeviceUnits(10)))
-        using (var fill = new SolidBrush(highlighted ? _palette.SurfaceHover : _palette.Surface))
+        using (var fill = new SolidBrush(MonthTint.For(person.Month, _palette, hover: highlighted)))
         using (var pen = new Pen(_palette.Border))
         {
             g.FillPath(fill, path);

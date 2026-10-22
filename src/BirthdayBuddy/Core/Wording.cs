@@ -50,6 +50,8 @@ public static class Wording
 
     public static string UpcomingLine(Person person, int daysUntil) => $"{person.Name} · {Status(daysUntil)}";
 
+    public static string NoMatch(string query) => $"No one matches “{query.Trim()}”";
+
     /// <param name="upcoming">People already sorted by <see cref="BirthdayCalendar.Upcoming"/>.</param>
     public static string Subtitle(IReadOnlyList<Person> upcoming, DateOnly today)
     {
