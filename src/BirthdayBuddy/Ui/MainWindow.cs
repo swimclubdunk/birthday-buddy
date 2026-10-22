@@ -8,6 +8,7 @@ public sealed class MainWindow : Form
     readonly Library _library;
     readonly Func<bool, bool> _setStartWithWindows;
     readonly Func<DateOnly> _today;
+    readonly Func<bool>? _revealDataFile;
 
     readonly Label _subtitle = Widgets.Label(role: Role.Subtle);
     readonly Button _add = Widgets.Button("+ Add", Role.PrimaryButton);
@@ -17,6 +18,7 @@ public sealed class MainWindow : Form
     readonly NumericUpDown _headsUp = new() { Minimum = 0, Maximum = Settings.MaxHeadsUpDays, Width = 52, Font = Theme.Body, BorderStyle = BorderStyle.FixedSingle, TextAlign = HorizontalAlignment.Center, Margin = new Padding(0, 2, 0, 0) };
     readonly CheckBox _startup = new() { Text = "Start with Windows", AutoSize = true, Font = Theme.Body, Margin = new Padding(0, 8, 0, 0) };
     readonly Label _note = Widgets.Label(role: Role.Error, font: Theme.Small);
+    readonly Label _showDataFile = Widgets.Label("Show data file", Role.Accent, Theme.Small);
     readonly Button _emptyAdd = Widgets.Button("Add your first birthday", Role.PrimaryButton);
     readonly TextBox _search = new() { PlaceholderText = "Search names", Font = Theme.Body, BorderStyle = BorderStyle.FixedSingle, Anchor = AnchorStyles.Left | AnchorStyles.Right, Margin = new Padding(0, 12, 0, 0) };
     readonly Label _noMatch = new() { Dock = DockStyle.Fill, AutoSize = false, TextAlign = ContentAlignment.MiddleCenter, Font = Theme.Body, Tag = Role.Subtle, UseMnemonic = false, AutoEllipsis = true };
@@ -25,8 +27,10 @@ public sealed class MainWindow : Form
 
     /// <param name="setStartWithWindows">Applies the startup setting; returns false if it couldn't.</param>
     /// <param name="time">Clock for the heads-up spinner's settle delay (tests pass a fake).</param>
-    public MainWindow(Library library, Func<bool, bool> setStartWithWindows, Func<DateOnly> today, TimeProvider? time = null)
+    /// <param name="revealDataFile">Shows birthdays.json in Explorer; returns false if it couldn't. Null hides the link.</param>
+    public MainWindow(Library library, Func<bool, bool> setStartWithWindows, Func<DateOnly> today, TimeProvider? time = null, Func<bool>? revealDataFile = null)
     {
+        _revealDataFile = revealDataFile;
         _library = library;
         _setStartWithWindows = setStartWithWindows;
         _today = today;
@@ -82,9 +86,12 @@ public sealed class MainWindow : Form
         daysLabel.Margin = new Padding(6, 5, 0, 0);
         var remind = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0) };
         remind.Controls.AddRange([remindLabel, _headsUp, daysLabel]);
+        _showDataFile.Margin = new Padding(0, 8, 0, 0);
+        _showDataFile.Cursor = Cursors.Hand;
+        _showDataFile.Visible = revealDataFile is not null;
         _note.Margin = new Padding(0, 4, 0, 0);
         var footer = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, Padding = new Padding(20, 12, 20, 14) };
-        footer.Controls.AddRange([remind, _startup, _note]);
+        footer.Controls.AddRange([remind, _startup, _showDataFile, _note]);
         var divider = new Panel { Dock = DockStyle.Bottom, Height = 1, Tag = Role.Border };
 
         var body = new Panel { Dock = DockStyle.Fill };
@@ -107,6 +114,7 @@ public sealed class MainWindow : Form
             if (!_syncing) _headsUpCommit.Trigger();
         };
         _startup.CheckedChanged += (_, _) => OnStartupToggled();
+        _showDataFile.Click += (_, _) => OnShowDataFile();
         _search.TextChanged += (_, _) => RefreshContent();
         _library.Changed += OnLibraryChanged;
     }
@@ -190,6 +198,12 @@ public sealed class MainWindow : Form
         _startup.Checked = !wanted;
         _syncing = false;
         _note.Text = "Couldn't change the startup setting. Details are in log.txt.";
+    }
+
+    void OnShowDataFile()
+    {
+        if (_revealDataFile is null) return;
+        _note.Text = _revealDataFile() ? "" : "Couldn't open the data file location. Details are in log.txt.";
     }
 
     void OnLibraryChanged(object? sender, EventArgs e)

@@ -106,4 +106,34 @@ public class MainWindowTests
         window.Size = window.MinimumSize + new Size(300, 300);
         Assert.Equal(window.MinimumSize + new Size(300, 300), window.Size);
     });
+
+    static void Click(Control c) =>
+        typeof(Control).GetMethod("OnClick", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .Invoke(c, [EventArgs.Empty]);
+
+    [Theory]
+    [InlineData(true, "")]
+    [InlineData(false, "Couldn't open the data file location. Details are in log.txt.")]
+    public void Show_data_file_reveals_the_file_and_reports_failure(bool succeeds, string note) => Sta.Run(() =>
+    {
+        SynchronizationContext.SetSynchronizationContext(new WindowsFormsSynchronizationContext());
+        using var dir = new TempDirectory();
+        var library = new Library(new BirthdayStore(dir.Path), new AppData());
+        int reveals = 0;
+        using var window = new MainWindow(library, _ => true, () => D(2026, 10, 22), new FakeTimeProvider(),
+            revealDataFile: () => { reveals++; return succeeds; })
+        {
+            StartPosition = FormStartPosition.Manual,
+            Location = new Point(-32000, -32000),
+            ShowInTaskbar = false,
+        };
+        window.Show();
+        Application.DoEvents();
+
+        var link = All<Label>(window).Single(l => l.Text == "Show data file");
+        Click(link);
+
+        Assert.Equal(1, reveals);
+        Assert.Contains(All<Label>(window), l => l.Tag is Role.Error && l.Text == note);
+    });
 }

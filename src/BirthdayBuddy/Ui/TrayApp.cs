@@ -12,6 +12,7 @@ public sealed class TrayApp : ApplicationContext
     readonly Notifier _notifier;
     readonly ReminderService _reminders;
     readonly StartupRegistration _startup = new();
+    readonly string _dataFilePath;
     MainWindow? _window;
 
     static string ExePath => Environment.ProcessPath ?? Application.ExecutablePath;
@@ -20,6 +21,7 @@ public sealed class TrayApp : ApplicationContext
     {
         var store = new BirthdayStore(BirthdayStore.DefaultDirectory);
         var loaded = store.Load();
+        _dataFilePath = store.FilePath;
         _library = new Library(store, loaded.Data, readOnly: loaded.Unavailable);
 
         _boldMenuFont = new Font(_menu.Font, FontStyle.Bold);
@@ -121,8 +123,16 @@ public sealed class TrayApp : ApplicationContext
                 _notifier.ShowMessage("Birthday Buddy", "Couldn't change the startup setting. Details are in log.txt.");
         };
         _menu.Items.Add(startup);
+        _menu.Items.Add(new ToolStripMenuItem("Show data file", null, (_, _) => RevealDataFile()));
         _menu.Items.Add(new ToolStripSeparator());
         _menu.Items.Add(new ToolStripMenuItem("Exit", null, (_, _) => ExitThread()));
+    }
+
+    bool RevealDataFile()
+    {
+        if (DataFile.Reveal(_dataFilePath)) return true;
+        _notifier.ShowMessage("Birthday Buddy", "Couldn't open the data file location. Details are in log.txt.");
+        return false;
     }
 
     void RefreshTooltip()
@@ -135,7 +145,7 @@ public sealed class TrayApp : ApplicationContext
     void ShowWindow()
     {
         if (_window is null || _window.IsDisposed)
-            _window = new MainWindow(_library, TrySetStartWithWindows, () => _reminders.Today);
+            _window = new MainWindow(_library, TrySetStartWithWindows, () => _reminders.Today, revealDataFile: () => DataFile.Reveal(_dataFilePath));
         _window.ShowAndActivate();
     }
 

@@ -17,5 +17,5 @@ Produces `dist/BirthdayBuddy.exe` — a single file that runs on any 64-bit Wind
     dotnet test
     dotnet run --project src/BirthdayBuddy
 
-Data lives in `%AppData%\BirthdayBuddy\birthdays.json`; errors are logged to `log.txt` next to it.
+Data lives in `%AppData%\BirthdayBuddy\birthdays.json`; errors are logged to `log.txt` next to it. Use **Show data file** (tray menu or window footer) to open that folder with the file selected.
 To redraw the icon: `dotnet run --project tools/IconGen -- src/BirthdayBuddy/app.ico`.
