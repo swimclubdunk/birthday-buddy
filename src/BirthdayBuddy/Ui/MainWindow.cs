@@ -17,15 +17,21 @@ public sealed class MainWindow : Form
     readonly NumericUpDown _headsUp = new() { Minimum = 0, Maximum = Settings.MaxHeadsUpDays, Width = 52, Font = Theme.Body, BorderStyle = BorderStyle.FixedSingle, TextAlign = HorizontalAlignment.Center, Margin = new Padding(0, 2, 0, 0) };
     readonly CheckBox _startup = new() { Text = "Start with Windows", AutoSize = true, Font = Theme.Body, Margin = new Padding(0, 8, 0, 0) };
     readonly Label _note = Widgets.Label(role: Role.Error, font: Theme.Small);
+    readonly Button _emptyAdd = Widgets.Button("Add your first birthday", Role.PrimaryButton);
+    readonly Debouncer _headsUpCommit;
     bool _syncing;
 
     /// <param name="setStartWithWindows">Applies the startup setting; returns false if it couldn't.</param>
-    public MainWindow(Library library, Func<bool, bool> setStartWithWindows, Func<DateOnly> today)
+    /// <param name="time">Clock for the heads-up spinner's settle delay (tests pass a fake).</param>
+    public MainWindow(Library library, Func<bool, bool> setStartWithWindows, Func<DateOnly> today, TimeProvider? time = null)
     {
         _library = library;
         _setStartWithWindows = setStartWithWindows;
         _today = today;
         _editor = new PersonEditor(today) { Dock = DockStyle.Fill, Visible = false };
+        // Commit the spinner once it settles, so stepping 3 → 30 is one save and one reminder check.
+        _headsUpCommit = new Debouncer(TimeSpan.FromMilliseconds(800), CommitHeadsUp, time ?? TimeProvider.System,
+            SynchronizationContext.Current ?? new WindowsFormsSynchronizationContext());
 
         Text = "Birthday Buddy";
         Icon = AppIcon.Load(SystemInformation.IconSize);
@@ -59,10 +65,9 @@ public sealed class MainWindow : Form
         var emptyHint = Widgets.Label("Add the people you care about and\nBirthday Buddy will remind you.", Role.Subtle);
         emptyHint.TextAlign = ContentAlignment.MiddleCenter;
         emptyHint.Margin = new Padding(0, 6, 0, 16);
-        var emptyAdd = Widgets.Button("Add your first birthday", Role.PrimaryButton);
-        foreach (Control c in new Control[] { emptyTitle, emptyHint, emptyAdd }) c.Anchor = AnchorStyles.None;
+        foreach (Control c in new Control[] { emptyTitle, emptyHint, _emptyAdd }) c.Anchor = AnchorStyles.None;
         var emptyStack = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, AutoSize = true, WrapContents = false, Anchor = AnchorStyles.None };
-        emptyStack.Controls.AddRange([emptyTitle, emptyHint, emptyAdd]);
+        emptyStack.Controls.AddRange([emptyTitle, emptyHint, _emptyAdd]);
         _empty.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         _empty.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         _empty.Controls.Add(emptyStack, 0, 0);
@@ -89,14 +94,14 @@ public sealed class MainWindow : Form
         Controls.Add(header);
 
         _add.Click += (_, _) => ShowEditor(null);
-        emptyAdd.Click += (_, _) => ShowEditor(null);
+        _emptyAdd.Click += (_, _) => ShowEditor(null);
         _list.PersonActivated += (_, person) => ShowEditor(person);
-        _editor.Saved += (_, person) => { _editor.Visible = false; _library.Upsert(person); RefreshContent(); };
-        _editor.Deleted += (_, id) => { _editor.Visible = false; _library.Remove(id); RefreshContent(); };
-        _editor.Cancelled += (_, _) => { _editor.Visible = false; RefreshContent(); };
+        _editor.Saved += (_, person) => { _library.Upsert(person); CloseEditor(); };
+        _editor.Deleted += (_, id) => { _library.Remove(id); CloseEditor(); };
+        _editor.Cancelled += (_, _) => CloseEditor();
         _headsUp.ValueChanged += (_, _) =>
         {
-            if (!_syncing) _library.UpdateSettings(_library.Data.Settings with { HeadsUpDays = (int)_headsUp.Value });
+            if (!_syncing) _headsUpCommit.Trigger();
         };
         _startup.CheckedChanged += (_, _) => OnStartupToggled();
         _library.Changed += OnLibraryChanged;
@@ -119,6 +124,22 @@ public sealed class MainWindow : Form
         else _editor.BeginEdit(person);
     }
 
+    /// <summary>Back to the list, with focus on it rather than on the next tab stop (the heads-up spinner).</summary>
+    void CloseEditor()
+    {
+        _editor.Visible = false;
+        RefreshContent();
+        if (_list.Visible) _list.Focus();
+        else _emptyAdd.Focus();
+    }
+
+    void CommitHeadsUp()
+    {
+        int days = (int)_headsUp.Value;
+        if (days != _library.Data.Settings.HeadsUpDays)
+            _library.UpdateSettings(_library.Data.Settings with { HeadsUpDays = days });
+    }
+
     void RefreshContent()
     {
         var today = _today();
@@ -134,7 +155,8 @@ public sealed class MainWindow : Form
         _add.Visible = !_editor.Visible && people.Count > 0; // the empty state has its own button
 
         _syncing = true;
-        _headsUp.Value = Math.Clamp(_library.Data.Settings.HeadsUpDays, 0, Settings.MaxHeadsUpDays);
+        if (!_headsUpCommit.Pending) // don't snap back a value the user is still choosing
+            _headsUp.Value = Math.Clamp(_library.Data.Settings.HeadsUpDays, 0, Settings.MaxHeadsUpDays);
         _startup.Checked = _library.Data.Settings.StartWithWindows;
         _syncing = false;
     }
@@ -162,7 +184,11 @@ public sealed class MainWindow : Form
     protected override void OnVisibleChanged(EventArgs e)
     {
         base.OnVisibleChanged(e);
-        if (!Visible) return;
+        if (!Visible)
+        {
+            _headsUpCommit.Flush();
+            return;
+        }
         bool dark = Theme.IsDarkMode();
         Widgets.ApplyPalette(this, dark ? Theme.Dark : Theme.Light);
         Theme.ApplyTitleBar(this, dark);
@@ -192,7 +218,12 @@ public sealed class MainWindow : Form
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing) _library.Changed -= OnLibraryChanged;
+        if (disposing)
+        {
+            _headsUpCommit.Flush();
+            _headsUpCommit.Dispose();
+            _library.Changed -= OnLibraryChanged;
+        }
         base.Dispose(disposing);
     }
 }

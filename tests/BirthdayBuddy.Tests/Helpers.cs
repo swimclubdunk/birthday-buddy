@@ -30,3 +30,27 @@ internal sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
     public override DateTimeOffset GetUtcNow() => Now.ToUniversalTime();
     public override TimeZoneInfo LocalTimeZone => TimeZoneInfo.Utc;
 }
+
+/// <summary>Runs posted callbacks immediately on the posting thread.</summary>
+internal sealed class InlineSynchronizationContext : SynchronizationContext
+{
+    public override void Post(SendOrPostCallback d, object? state) => d(state);
+}
+
+internal static class Sta
+{
+    /// <summary>Runs WinForms code on a fresh STA thread and rethrows anything it throws.</summary>
+    public static void Run(Action action)
+    {
+        Exception? error = null;
+        var thread = new Thread(() =>
+        {
+            try { action(); }
+            catch (Exception ex) { error = ex; }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+        if (error is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw();
+    }
+}
