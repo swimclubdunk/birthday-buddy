@@ -73,12 +73,15 @@ public class WordingTests
     [InlineData(12, "in 12 days")]
     public void Status(int days, string expected) => Assert.Equal(expected, Wording.Status(days));
 
+    [Theory]
+    [InlineData(0, "34 today 🎉")]
+    [InlineData(1, "34 tomorrow")]
+    [InlineData(12, "34 in 12 days")]
+    public void Status_leads_with_the_age_to_be_when_known(int days, string expected) =>
+        Assert.Equal(expected, Wording.Status(days, age: 34));
+
     [Fact]
-    public void Detail_with_and_without_age()
-    {
-        Assert.Equal("24 Oct · turns 34", Wording.Detail(D(2026, 10, 24), 34, Inv));
-        Assert.Equal("24 Oct", Wording.Detail(D(2026, 10, 24), null, Inv));
-    }
+    public void Detail_is_just_the_date() => Assert.Equal("24 Oct", Wording.Detail(D(2026, 10, 24), Inv));
 
     [Fact]
     public void Upcoming_line() => Assert.Equal("Sam · in 3 days", Wording.UpcomingLine(P(25, 10), 3));

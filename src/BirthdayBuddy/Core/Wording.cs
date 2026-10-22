@@ -35,18 +35,18 @@ public static class Wording
         ? (r.Age is int age ? $"It's {r.Name}'s birthday today! Turning {age}." : $"It's {r.Name}'s birthday today!")
         : $"{r.Name}'s birthday is {When(r.DaysUntil)} ({r.Date.ToString("ddd d MMM", culture)}).";
 
-    public static string Status(int daysUntil) => daysUntil switch
+    /// <param name="age">The age they're turning; when known it leads, e.g. "34 in 12 days".</param>
+    public static string Status(int daysUntil, int? age = null) => (daysUntil, age) switch
     {
-        0 => "Today 🎉",
-        1 => "Tomorrow",
-        _ => $"in {daysUntil} days",
+        (0, null) => "Today 🎉",
+        (1, null) => "Tomorrow",
+        (_, null) => $"in {daysUntil} days",
+        (0, _) => $"{age} today 🎉",
+        (1, _) => $"{age} tomorrow",
+        _ => $"{age} in {daysUntil} days",
     };
 
-    public static string Detail(DateOnly occurrence, int? age, CultureInfo culture)
-    {
-        var date = occurrence.ToString("d MMM", culture);
-        return age is int a ? $"{date} · turns {a}" : date;
-    }
+    public static string Detail(DateOnly occurrence, CultureInfo culture) => occurrence.ToString("d MMM", culture);
 
     public static string UpcomingLine(Person person, int daysUntil) => $"{person.Name} · {Status(daysUntil)}";
 

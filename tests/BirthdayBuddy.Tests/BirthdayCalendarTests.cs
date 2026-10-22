@@ -54,6 +54,16 @@ public class BirthdayCalendarTests
     }
 
     [Theory]
+    [InlineData(10, true)]
+    [InlineData(20, true)]
+    [InlineData(40, true)]
+    [InlineData(0, false)]
+    [InlineData(34, false)]
+    [InlineData(null, false)]
+    public void IsRoundBirthday(int? age, bool expected) =>
+        Assert.Equal(expected, BirthdayCalendar.IsRoundBirthday(age));
+
+    [Theory]
     [InlineData(29, 2, true)]
     [InlineData(30, 2, false)]
     [InlineData(31, 4, false)]

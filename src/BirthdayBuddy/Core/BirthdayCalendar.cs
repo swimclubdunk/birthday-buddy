@@ -22,6 +22,9 @@ public static class BirthdayCalendar
     public static int? AgeOn(Person person, DateOnly occurrence) =>
         person.Year is int year ? occurrence.Year - year : null;
 
+    /// <summary>Turning 10, 20, 30, …</summary>
+    public static bool IsRoundBirthday(int? age) => age is int a && a > 0 && a % 10 == 0;
+
     public static IReadOnlyList<Person> Upcoming(IEnumerable<Person> people, DateOnly today) =>
         people.OrderBy(p => DaysUntil(p, today))
               .ThenBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase)

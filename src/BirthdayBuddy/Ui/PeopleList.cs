@@ -7,7 +7,7 @@ namespace BirthdayBuddy.Ui;
 /// <summary>Owner-drawn list of soft cards: name and date on the left, status on the right.</summary>
 public sealed class PeopleList : ListBox
 {
-    const int RowHeight = 62;
+    const int RowHeight = 48;
     const TextFormatFlags TextFlags = TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine | TextFormatFlags.EndEllipsis;
 
     Palette _palette = Theme.Light;
@@ -68,36 +68,61 @@ public sealed class PeopleList : ListBox
         if (e.Index < 0 || e.Index >= Items.Count || Items[e.Index] is not Person person) return;
 
         g.SmoothingMode = SmoothingMode.AntiAlias;
-        int gap = LogicalToDeviceUnits(4), side = LogicalToDeviceUnits(16), pad = LogicalToDeviceUnits(14);
+        int gap = LogicalToDeviceUnits(3), side = LogicalToDeviceUnits(16), pad = LogicalToDeviceUnits(14);
         var card = new Rectangle(e.Bounds.X + side, e.Bounds.Y + gap, e.Bounds.Width - 2 * side - 1, e.Bounds.Height - 2 * gap);
         bool highlighted = e.Index == _hover || (Focused && (e.State & DrawItemState.Selected) != 0);
 
-        using (var path = Shapes.RoundedRect(card, LogicalToDeviceUnits(10)))
+        var next = BirthdayCalendar.NextOccurrence(person, _today);
+        int days = next.DayNumber - _today.DayNumber;
+        int? age = BirthdayCalendar.AgeOn(person, next);
+        bool round = BirthdayCalendar.IsRoundBirthday(age);
+
+        // Round birthdays get a soft accent glow on the border instead of the plain hairline.
+        var border = round ? Blend(_palette.Border, _palette.Accent, 0.5f) : _palette.Border;
+        using (var path = Shapes.RoundedRect(card, LogicalToDeviceUnits(9)))
         using (var fill = new SolidBrush(MonthTint.For(person.Month, _palette, hover: highlighted)))
-        using (var pen = new Pen(_palette.Border))
+        using (var pen = new Pen(border, round ? LogicalToDeviceUnits(3) / 2f : 1f))
         {
             g.FillPath(fill, path);
             g.DrawPath(pen, path);
         }
 
-        var next = BirthdayCalendar.NextOccurrence(person, _today);
-        int days = next.DayNumber - _today.DayNumber;
-        string status = Wording.Status(days);
+        string status = Wording.Status(days, age);
         var statusFont = days == 0 ? Theme.BodyBold : Theme.Small;
         var statusColor = days == 0 ? _palette.Accent : _palette.SubtleText;
-        int statusWidth = TextRenderer.MeasureText(g, status, statusFont).Width;
+        int statusWidth = TextRenderer.MeasureText(g, status, statusFont, Size.Empty, StatusFlags).Width;
 
         int textWidth = card.Width - 3 * pad - statusWidth;
         int half = card.Height / 2;
-        var nameRect = new Rectangle(card.X + pad, card.Y, textWidth, half + LogicalToDeviceUnits(2));
-        var detailRect = new Rectangle(card.X + pad, card.Y + half + LogicalToDeviceUnits(1), textWidth, half);
+        var nameRect = new Rectangle(card.X + pad, card.Y, textWidth, half + LogicalToDeviceUnits(1));
+        var detailRect = new Rectangle(card.X + pad, card.Y + half, textWidth, half);
         var statusRect = new Rectangle(card.Right - pad - statusWidth, card.Y, statusWidth, card.Height);
-        string detail = Wording.Detail(next, BirthdayCalendar.AgeOn(person, next), CultureInfo.CurrentCulture);
+        string detail = Wording.Detail(next, CultureInfo.CurrentCulture);
 
         TextRenderer.DrawText(g, person.Name, Theme.BodyBold, nameRect, _palette.Text, TextFlags | TextFormatFlags.Bottom);
         TextRenderer.DrawText(g, detail, Theme.Small, detailRect, _palette.SubtleText, TextFlags | TextFormatFlags.Top);
-        TextRenderer.DrawText(g, status, statusFont, statusRect, statusColor, TextFlags | TextFormatFlags.VerticalCenter | TextFormatFlags.Right);
+
+        if (round && days != 0)
+        {
+            // "40 in 12 days": the age picks up the accent, the rest stays quiet.
+            string ageText = age!.Value.ToString(CultureInfo.CurrentCulture);
+            int ageWidth = TextRenderer.MeasureText(g, ageText, statusFont, Size.Empty, StatusFlags).Width;
+            var ageRect = statusRect with { Width = ageWidth };
+            var restRect = new Rectangle(statusRect.X + ageWidth, statusRect.Y, statusRect.Width - ageWidth, statusRect.Height);
+            TextRenderer.DrawText(g, ageText, statusFont, ageRect, _palette.Accent, StatusFlags | TextFormatFlags.VerticalCenter);
+            TextRenderer.DrawText(g, status[ageText.Length..], statusFont, restRect, statusColor, StatusFlags | TextFormatFlags.VerticalCenter);
+        }
+        else
+        {
+            TextRenderer.DrawText(g, status, statusFont, statusRect, statusColor, StatusFlags | TextFormatFlags.VerticalCenter | TextFormatFlags.Right);
+        }
     }
+
+    // No padding, so a status split into accent + plain parts lines up exactly with an unsplit one.
+    const TextFormatFlags StatusFlags = TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine | TextFormatFlags.NoPadding;
+
+    static Color Blend(Color a, Color b, float amount) => Color.FromArgb(
+        (int)(a.R + (b.R - a.R) * amount), (int)(a.G + (b.G - a.G) * amount), (int)(a.B + (b.B - a.B) * amount));
 
     protected override void OnMouseMove(MouseEventArgs e)
     {
