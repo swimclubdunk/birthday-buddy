@@ -61,7 +61,7 @@ Let `next(p, today)` be the person's next birthday occurrence on or after `today
 
 ### When checks run
 - On startup.
-- At local midnight (one-shot timer re-armed after each check for the next midnight + 5 s).
+- At local midnight (one-shot timer re-armed after each check for the next midnight + 5 s, capped at 1 hour so a missed wake event or clock drift self-corrects within the hour).
 - On resume from sleep (`SystemEvents.PowerModeChanged`, `Resume`).
 - On system time / time zone change (`SystemEvents.TimeChanged`).
 - After the library or heads-up setting changes (so a newly added person can be reminded immediately).
