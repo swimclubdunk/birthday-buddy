@@ -46,6 +46,7 @@ Shown with `NotifyIcon.ShowBalloonTip` (on Windows 10/11 this renders as a nativ
 - Single instance (named mutex). Launching a second copy signals the running instance (named event) to show its window, then exits.
 - Launched with `--tray` (used by the startup registry entry): starts silently in the tray.
 - Launched manually (no args): opens the window.
+- Start with Windows: on first launch (no data file yet) the app registers itself in the per-user Run key, so it starts silently in the tray at every Windows login. On every launch, if the setting is on, the registered path is refreshed to the current exe location. Turning the setting off removes the entry.
 
 ## Reminder rules
 
