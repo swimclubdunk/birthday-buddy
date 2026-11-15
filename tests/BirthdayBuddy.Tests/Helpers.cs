@@ -54,3 +54,19 @@ internal static class Sta
         if (error is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw();
     }
 }
+
+/// <summary>Records what would have been played; answers TryPlay with <see cref="Succeeds"/>.</summary>
+internal sealed class FakePlayer : IFanfarePlayer
+{
+    public List<(string Path, double Volume)> Played { get; } = [];
+    public int Stops { get; private set; }
+    public Func<string, bool> Succeeds { get; set; } = _ => true;
+
+    public bool TryPlay(string path, double volume)
+    {
+        Played.Add((path, volume));
+        return Succeeds(path);
+    }
+
+    public void Stop() => Stops++;
+}
