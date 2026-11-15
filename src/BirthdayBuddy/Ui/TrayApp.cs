@@ -146,7 +146,7 @@ public sealed class TrayApp : ApplicationContext
     void ShowWindow()
     {
         if (_window is null || _window.IsDisposed)
-            _window = new MainWindow(_library, TrySetStartWithWindows, () => _reminders.Today);
+            _window = new MainWindow(_library, TrySetStartWithWindows, () => _reminders.Today, fanfare: _fanfare);
         _window.ShowAndActivate();
     }
 

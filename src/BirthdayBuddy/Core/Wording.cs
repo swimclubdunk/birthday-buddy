@@ -78,6 +78,7 @@ public static class Wording
 
     public const string AcknowledgeButton = "Okay I got it!";
     public const string DefaultFanfare = "Default fanfare";
+    public const string SoundImportFailed = "Couldn't use that sound file. Details are in log.txt.";
 
     public static string CelebrationHeadline(string name) => $"It's {name}'s birthday!";
 
