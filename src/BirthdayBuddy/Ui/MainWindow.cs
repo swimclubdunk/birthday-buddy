@@ -10,21 +10,8 @@ public sealed class MainWindow : Form
 
     readonly Label _subtitle = Widgets.Label(role: Role.Subtle);
     readonly Button _add = Widgets.Button("+ Add", Role.PrimaryButton);
-    readonly Button _gear = new()
-    {
-        Text = "⚙", // ⚙
-        AccessibleName = "Settings",
-        Tag = Role.SecondaryButton,
-        AutoSize = false,
-        Width = 34,
-        Anchor = AnchorStyles.Top | AnchorStyles.Bottom, // as tall as + Add
-        FlatStyle = FlatStyle.Flat,
-        Font = new Font("Segoe UI Symbol", 11f),
-        Padding = new Padding(0),
-        Margin = new Padding(6, 0, 0, 0),
-        Cursor = Cursors.Hand,
-        UseVisualStyleBackColor = false,
-    };
+    readonly IconButton _gear = new("Settings", GlyphArt.Gear);
+    readonly IconButton _back = new("Back", GlyphArt.Back) { Visible = false };
     readonly ToolTip _tips = new();
     readonly PeopleList _list = new() { Dock = DockStyle.Fill };
     readonly TableLayoutPanel _empty = new() { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 1 };
@@ -63,9 +50,13 @@ public sealed class MainWindow : Form
         _subtitle.Anchor = AnchorStyles.Left | AnchorStyles.Right;
         _subtitle.Margin = new Padding(1, 2, 8, 0);
         _add.Margin = new Padding(0);
+        // Square icon buttons as tall as + Add. In the settings only Back shows, right-aligned where the gear was.
+        int side = _add.GetPreferredSize(Size.Empty).Height;
+        _gear.Size = _back.Size = new Size(side, side);
         _tips.SetToolTip(_gear, "Settings");
+        _tips.SetToolTip(_back, "Back");
         var actions = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Anchor = AnchorStyles.Right, Margin = new Padding(0) };
-        actions.Controls.AddRange([_add, _gear]);
+        actions.Controls.AddRange([_add, _gear, _back]);
         var header = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, ColumnCount = 2, RowCount = 3, Padding = new Padding(20, 18, 20, 12) };
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
@@ -98,11 +89,11 @@ public sealed class MainWindow : Form
         _add.Click += (_, _) => ShowEditor(null);
         _emptyAdd.Click += (_, _) => ShowEditor(null);
         _gear.Click += (_, _) => ShowSettings();
+        _back.Click += (_, _) => CloseSettings();
         _list.PersonActivated += (_, person) => ShowEditor(person);
         _editor.Saved += (_, person) => { _library.Upsert(person); CloseEditor(); };
         _editor.Deleted += (_, id) => { _library.Remove(id); CloseEditor(); };
         _editor.Cancelled += (_, _) => CloseEditor();
-        _settings.Closed += (_, _) => CloseSettings();
         _search.TextChanged += (_, _) => RefreshContent();
         _library.Changed += OnLibraryChanged;
     }
@@ -140,6 +131,7 @@ public sealed class MainWindow : Form
         HideList();
         _settings.Sync();
         _settings.Visible = true;
+        _back.Visible = true;
     }
 
     /// <summary>Back to the list, with focus on it rather than on the next tab stop.</summary>
@@ -153,6 +145,7 @@ public sealed class MainWindow : Form
     {
         _settings.Flush();
         _settings.Visible = false;
+        _back.Visible = false;
         ReturnToList();
     }
 
@@ -216,6 +209,7 @@ public sealed class MainWindow : Form
             e.Cancel = true;
             _editor.Visible = false;
             _settings.Visible = false; // reopen on the list
+            _back.Visible = false;
             Hide();
         }
         base.OnFormClosing(e);

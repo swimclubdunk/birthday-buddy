@@ -152,18 +152,44 @@ public class MainWindowTests
         Assert.False(ButtonNamed(window, "Add your first birthday").Visible);
     });
 
+    static Button Back(Control root) => All<Button>(root).Single(b => b.AccessibleName == "Back");
+
     [Fact]
-    public void Done_returns_to_the_list() => InWindow((window, _, _) =>
+    public void Back_arrow_returns_to_the_list() => InWindow((window, _, _) =>
     {
+        Assert.False(Back(window).Visible);
         OpenSettings(window);
-        ButtonNamed(window, "Done").PerformClick();
+        Back(window).PerformClick();
         Application.DoEvents();
 
         Assert.False(All<SettingsPanel>(window).Single().Visible);
         Assert.True(All<PeopleList>(window).Single().Visible);
         Assert.True(ButtonNamed(window, "+ Add").Visible);
         Assert.True(Gear(window).Visible);
+        Assert.False(Back(window).Visible);
     }, P(24, 10, name: "Sam"));
+
+    [Fact]
+    public void Back_arrow_takes_the_gears_place_and_size() => InWindow((window, _, _) =>
+    {
+        var gear = Gear(window);
+        var gearBounds = gear.RectangleToScreen(gear.ClientRectangle);
+        var add = ButtonNamed(window, "+ Add");
+        Assert.Equal(add.Height, gear.Height);
+        Assert.Equal(gear.Width, gear.Height);
+
+        OpenSettings(window);
+        var back = Back(window);
+        Assert.True(back.Visible);
+        Assert.Equal(gearBounds, back.RectangleToScreen(back.ClientRectangle));
+    }, P(24, 10, name: "Sam"));
+
+    [Fact]
+    public void Settings_have_no_Done_button() => InWindow((window, _, _) =>
+    {
+        OpenSettings(window);
+        Assert.DoesNotContain(All<Button>(window), b => b.Text == "Done");
+    });
 
     [Fact]
     public void Escape_leaves_the_settings_but_keeps_the_window_open() => InWindow((window, _, _) =>
@@ -196,7 +222,7 @@ public class MainWindowTests
         window.PerformLayout();
         Application.DoEvents();
         var client = window.RectangleToScreen(window.ClientRectangle);
-        foreach (var control in new Control[] { IdleSpinner(window), VolumeSlider(window), ButtonNamed(window, "Choose…"), ButtonNamed(window, "Test"), All<CheckBox>(window).Single(), ButtonNamed(window, "Done") })
+        foreach (var control in new Control[] { IdleSpinner(window), VolumeSlider(window), ButtonNamed(window, "Choose…"), ButtonNamed(window, "Test"), All<CheckBox>(window).Single(), Back(window) })
             Assert.True(client.Contains(control.RectangleToScreen(control.ClientRectangle)), $"{control.GetType().Name} {control.Text} is cut off: {control.RectangleToScreen(control.ClientRectangle)} vs {client}");
     });
 

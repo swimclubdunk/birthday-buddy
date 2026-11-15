@@ -22,14 +22,10 @@ public sealed class SettingsPanel : UserControl
     readonly CheckBox _startup = new() { Text = "Start with Windows", AutoSize = true, Font = Theme.Body, Margin = new Padding(0, 10, 0, 0) };
     readonly Label _showDataFile = Widgets.Label("Show data file", Role.Accent, Theme.Small);
     readonly Label _note = Widgets.Label(role: Role.Error, font: Theme.Small);
-    readonly Button _done = Widgets.Button("Done", Role.PrimaryButton);
     readonly Debouncer _headsUpCommit;
     readonly Debouncer _idleCommit;
     readonly Debouncer _volumeCommit;
     bool _syncing;
-
-    /// <summary>Done was clicked: go back to the list.</summary>
-    public event EventHandler? Closed;
 
     /// <param name="setStartWithWindows">Applies the startup setting; returns false if it couldn't.</param>
     /// <param name="time">Clock for the spinners' and slider's settle delay (tests pass a fake).</param>
@@ -84,10 +80,9 @@ public sealed class SettingsPanel : UserControl
         _showDataFile.Cursor = Cursors.Hand;
         _showDataFile.Visible = revealDataFile is not null;
         _note.Margin = new Padding(0, 4, 0, 0);
-        _done.Margin = new Padding(0, 16, 0, 0);
 
         var layout = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, Padding = new Padding(20, 4, 20, 8) };
-        layout.Controls.AddRange([heading, remind, idle, volume, sound, soundButtons, _startup, _showDataFile, _note, _done]);
+        layout.Controls.AddRange([heading, remind, idle, volume, sound, soundButtons, _startup, _showDataFile, _note]);
         Controls.Add(layout);
 
         _headsUp.ValueChanged += (_, _) =>
@@ -108,7 +103,6 @@ public sealed class SettingsPanel : UserControl
         _testSound.Click += (_, _) => _fanfare?.Play(_volume.Value / 10.0);
         _startup.CheckedChanged += (_, _) => OnStartupToggled();
         _showDataFile.Click += (_, _) => OnShowDataFile();
-        _done.Click += (_, _) => Closed?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>Shows the saved settings, except values the user is still choosing.</summary>
