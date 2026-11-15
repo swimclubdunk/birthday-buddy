@@ -74,8 +74,9 @@ public class PersonRulesTests
     [Fact]
     public void Editing_the_date_resets_sent_markers()
     {
-        var original = P(24, 10) with { LastHeadsUp = D(2026, 10, 24), LastBirthdayNotice = D(2025, 10, 24) };
+        var original = P(24, 10) with { LastHeadsUp = D(2026, 10, 24), LastBirthdayNotice = D(2025, 10, 24), LastBirthdayAck = D(2025, 10, 24) };
         var edited = PersonRules.Edit(original, "Sam", 25, 10, null);
+        Assert.Null(edited.LastBirthdayAck);
         Assert.Equal(original.Id, edited.Id);
         Assert.Null(edited.LastHeadsUp);
         Assert.Null(edited.LastBirthdayNotice);
@@ -84,8 +85,9 @@ public class PersonRulesTests
     [Fact]
     public void Editing_only_the_name_keeps_sent_markers()
     {
-        var original = P(24, 10) with { LastHeadsUp = D(2026, 10, 24) };
+        var original = P(24, 10) with { LastHeadsUp = D(2026, 10, 24), LastBirthdayAck = D(2025, 10, 24) };
         var edited = PersonRules.Edit(original, "Samantha", 24, 10, 1992);
+        Assert.Equal(D(2025, 10, 24), edited.LastBirthdayAck);
         Assert.Equal("Samantha", edited.Name);
         Assert.Equal(1992, edited.Year);
         Assert.Equal(D(2026, 10, 24), edited.LastHeadsUp);

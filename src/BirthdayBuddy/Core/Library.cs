@@ -22,6 +22,13 @@ public sealed class Library(BirthdayStore store, AppData data, bool readOnly = f
     public void RecordSent(IReadOnlyList<Person> people) =>
         Commit(Data with { People = people }, notify: false);
 
+    /// <summary>Records that the owner acknowledged this person's birthday today. Doesn't raise Changed.</summary>
+    public void Acknowledge(Guid personId, DateOnly today)
+    {
+        if (!Data.People.Any(p => p.Id == personId)) return;
+        Commit(Data with { People = Data.People.Select(p => p.Id == personId ? p with { LastBirthdayAck = today } : p).ToList() }, notify: false);
+    }
+
     void Commit(AppData next, bool notify)
     {
         Data = next;

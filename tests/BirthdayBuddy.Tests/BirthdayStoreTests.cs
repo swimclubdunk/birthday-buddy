@@ -134,4 +134,45 @@ public class BirthdayStoreTests : IDisposable
         Assert.True(result.Unavailable);
         Assert.Equal("{ not json", File.ReadAllText(Store().FilePath));
     }
+
+    [Fact]
+    public void Old_file_without_new_fields_loads_defaults()
+    {
+        File.WriteAllText(Store().FilePath, """{"version":1,"settings":{"headsUpDays":3,"startWithWindows":true},"people":[]}""");
+        var settings = Store().Load().Data.Settings;
+        Assert.Equal(5, settings.IdleMinutes);
+        Assert.Equal(1.0, settings.FanfareVolume);
+        Assert.Null(settings.FanfareSound);
+    }
+
+    [Theory]
+    [InlineData(90, 0.46, 60, 0.5)]
+    [InlineData(-3, 7.0, 0, 1.0)]
+    [InlineData(500, -1.0, 60, 0.0)]
+    public void Sanitize_clamps_idle_and_snaps_volume(int idle, double volume, int expectedIdle, double expectedVolume)
+    {
+        Store().Save(new AppData { Settings = new Settings { IdleMinutes = idle, FanfareVolume = volume } });
+        var settings = Store().Load().Data.Settings;
+        Assert.Equal(expectedIdle, settings.IdleMinutes);
+        Assert.Equal(expectedVolume, settings.FanfareVolume);
+    }
+
+    [Theory]
+    [InlineData(@"..\x.mp3", null)]
+    [InlineData(@"C:\x.mp3", null)]
+    [InlineData("a/b.mp3", null)]
+    [InlineData("", null)]
+    [InlineData("Party Horn.MP3", "Party Horn.MP3")]
+    public void Sanitize_drops_a_fanfare_sound_that_is_not_a_plain_file_name(string sound, string? expected)
+    {
+        Store().Save(new AppData { Settings = new Settings { FanfareSound = sound } });
+        Assert.Equal(expected, Store().Load().Data.Settings.FanfareSound);
+    }
+
+    [Fact]
+    public void Ack_marker_round_trips()
+    {
+        Store().Save(new AppData { People = [P(15, 11) with { LastBirthdayAck = D(2026, 11, 15) }] });
+        Assert.Equal(D(2026, 11, 15), Assert.Single(Store().Load().Data.People).LastBirthdayAck);
+    }
 }

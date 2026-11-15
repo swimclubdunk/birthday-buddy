@@ -50,6 +50,7 @@ public static class PersonRules
             Year = year,
             LastHeadsUp = dateChanged ? null : original.LastHeadsUp,
             LastBirthdayNotice = dateChanged ? null : original.LastBirthdayNotice,
+            LastBirthdayAck = dateChanged ? null : original.LastBirthdayAck,
         };
     }
 }

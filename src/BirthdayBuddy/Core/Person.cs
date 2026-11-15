@@ -13,4 +13,7 @@ public sealed record Person
 
     /// <summary>The day the last day-of notification was sent.</summary>
     public DateOnly? LastBirthdayNotice { get; init; }
+
+    /// <summary>The day the owner clicked "Okay I got it!" on this person's birthday popup.</summary>
+    public DateOnly? LastBirthdayAck { get; init; }
 }
