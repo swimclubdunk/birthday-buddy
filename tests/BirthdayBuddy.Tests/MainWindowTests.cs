@@ -78,6 +78,7 @@ public class MainWindowTests
     [Fact]
     public void Default_button_clears_the_custom_sound() => InWindowWithSound((window, library, _, _) =>
     {
+        OpenSettings(window);
         Assert.Contains(All<Label>(window), l => l.Text == "x.mp3");
         ButtonNamed(window, "Default").PerformClick();
         Assert.Null(library.Data.Settings.FanfareSound);
@@ -87,19 +88,141 @@ public class MainWindowTests
     [Fact]
     public void Test_plays_at_the_slider_volume_before_it_is_saved() => InWindowWithSound((window, _, _, player) =>
     {
+        OpenSettings(window);
         VolumeSlider(window).Value = 3;
         ButtonNamed(window, "Test").PerformClick();
         Assert.Equal(0.3, Assert.Single(player.Played).Volume);
     });
 
-    [Fact]
-    public void Footer_fits_at_minimum_size() => InWindowWithSound((window, _, _, _) =>
+    static Button Gear(Control root) => All<Button>(root).Single(b => b.AccessibleName == "Settings");
+
+    static void OpenSettings(MainWindow window)
     {
+        Gear(window).PerformClick();
+        Application.DoEvents();
+    }
+
+    static bool PressEscape(MainWindow window)
+    {
+        var msg = new Message();
+        object[] args = [msg, Keys.Escape];
+        var handled = (bool)typeof(MainWindow).GetMethod("ProcessCmdKey", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .Invoke(window, args)!;
+        Application.DoEvents();
+        return handled;
+    }
+
+    [Fact]
+    public void Gear_sits_right_of_Add() => InWindow((window, _, _) =>
+    {
+        var add = ButtonNamed(window, "+ Add");
+        var gear = Gear(window);
+        Assert.True(gear.Visible);
+        Assert.Same(add.Parent, gear.Parent);
+        Assert.True(gear.Left >= add.Right, $"gear at {gear.Left}, Add ends at {add.Right}");
+    }, P(24, 10, name: "Sam"));
+
+    [Fact]
+    public void Settings_are_not_shown_on_the_list() => InWindowWithSound((window, _, _, _) =>
+    {
+        Assert.False(IdleSpinner(window).Visible);
+        Assert.False(VolumeSlider(window).Visible);
+        Assert.False(All<CheckBox>(window).Single(c => c.Text == "Start with Windows").Visible);
+    });
+
+    [Fact]
+    public void Gear_opens_the_settings_over_the_list() => InWindow((window, _, _) =>
+    {
+        OpenSettings(window);
+
+        Assert.True(All<SettingsPanel>(window).Single().Visible);
+        Assert.True(IdleSpinner(window).Visible);
+        Assert.False(All<PeopleList>(window).Single().Visible);
+        Assert.False(ButtonNamed(window, "+ Add").Visible);
+        Assert.False(Gear(window).Visible);
+        Assert.False(SearchBox(window).Visible);
+    }, P(24, 10, name: "Sam"));
+
+    [Fact]
+    public void Gear_works_from_the_empty_state() => InWindow((window, _, _) =>
+    {
+        Assert.True(Gear(window).Visible);
+        OpenSettings(window);
+        Assert.True(All<SettingsPanel>(window).Single().Visible);
+        Assert.False(ButtonNamed(window, "Add your first birthday").Visible);
+    });
+
+    static Button Back(Control root) => All<Button>(root).Single(b => b.AccessibleName == "Back");
+
+    [Fact]
+    public void Back_arrow_returns_to_the_list() => InWindow((window, _, _) =>
+    {
+        Assert.False(Back(window).Visible);
+        OpenSettings(window);
+        Back(window).PerformClick();
+        Application.DoEvents();
+
+        Assert.False(All<SettingsPanel>(window).Single().Visible);
+        Assert.True(All<PeopleList>(window).Single().Visible);
+        Assert.True(ButtonNamed(window, "+ Add").Visible);
+        Assert.True(Gear(window).Visible);
+        Assert.False(Back(window).Visible);
+    }, P(24, 10, name: "Sam"));
+
+    [Fact]
+    public void Back_arrow_takes_the_gears_place_and_size() => InWindow((window, _, _) =>
+    {
+        var gear = Gear(window);
+        var gearBounds = gear.RectangleToScreen(gear.ClientRectangle);
+        var add = ButtonNamed(window, "+ Add");
+        Assert.Equal(add.Height, gear.Height);
+        Assert.Equal(gear.Width, gear.Height);
+
+        OpenSettings(window);
+        var back = Back(window);
+        Assert.True(back.Visible);
+        Assert.Equal(gearBounds, back.RectangleToScreen(back.ClientRectangle));
+    }, P(24, 10, name: "Sam"));
+
+    [Fact]
+    public void Settings_have_no_Done_button() => InWindow((window, _, _) =>
+    {
+        OpenSettings(window);
+        Assert.DoesNotContain(All<Button>(window), b => b.Text == "Done");
+    });
+
+    [Fact]
+    public void Escape_leaves_the_settings_but_keeps_the_window_open() => InWindow((window, _, _) =>
+    {
+        OpenSettings(window);
+        Assert.True(PressEscape(window));
+
+        Assert.True(window.Visible);
+        Assert.False(All<SettingsPanel>(window).Single().Visible);
+        Assert.True(All<PeopleList>(window).Single().Visible);
+    }, P(24, 10, name: "Sam"));
+
+    [Fact]
+    public void Reopening_the_window_shows_the_list() => InWindow((window, _, _) =>
+    {
+        OpenSettings(window);
+        window.Close(); // hides to the tray
+        window.ShowAndActivate();
+        Application.DoEvents();
+
+        Assert.False(All<SettingsPanel>(window).Single().Visible);
+        Assert.True(All<PeopleList>(window).Single().Visible);
+    }, P(24, 10, name: "Sam"));
+
+    [Fact]
+    public void Settings_fit_at_minimum_size() => InWindowWithSound((window, _, _, _) =>
+    {
+        OpenSettings(window);
         window.Size = window.MinimumSize;
         window.PerformLayout();
         Application.DoEvents();
         var client = window.RectangleToScreen(window.ClientRectangle);
-        foreach (var control in new Control[] { IdleSpinner(window), VolumeSlider(window), ButtonNamed(window, "Choose…"), ButtonNamed(window, "Test") })
+        foreach (var control in new Control[] { IdleSpinner(window), VolumeSlider(window), ButtonNamed(window, "Choose…"), ButtonNamed(window, "Test"), All<CheckBox>(window).Single(), Back(window) })
             Assert.True(client.Contains(control.RectangleToScreen(control.ClientRectangle)), $"{control.GetType().Name} {control.Text} is cut off: {control.RectangleToScreen(control.ClientRectangle)} vs {client}");
     });
 

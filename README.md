@@ -20,7 +20,7 @@ Produces `dist/BirthdayBuddy.exe` — a single file that runs on any 64-bit Wind
     dotnet test
     dotnet run --project src/BirthdayBuddy
 
-Data lives in `%AppData%\BirthdayBuddy\birthdays.json`; errors are logged to `log.txt` next to it. Use **Show data file** (tray menu or window footer) to open that folder with the file selected.
+Data lives in `%AppData%\BirthdayBuddy\birthdays.json`; errors are logged to `log.txt` next to it. Use **Show data file** (tray menu, or the settings behind the ⚙ button) to open that folder with the file selected.
 A chosen fanfare is copied to `%AppData%\BirthdayBuddy\sounds\`.
 To redraw the icon: `dotnet run --project tools/IconGen -- src/BirthdayBuddy/app.ico`.
 To regenerate the bundled fanfare: `dotnet run --project tools/SoundGen -- src/BirthdayBuddy/fanfare.wav`.
