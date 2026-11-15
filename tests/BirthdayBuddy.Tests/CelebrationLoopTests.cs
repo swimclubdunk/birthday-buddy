@@ -283,4 +283,22 @@ public class CelebrationLoopTests : IDisposable
         Advance(1000);
         Assert.Equal(Id("Sam"), Assert.Single(loop.Visible).PersonId);
     }
+
+    // Final review M2: a stale "pointer inside" from the previous stack must not hold the next one.
+    [Fact]
+    public void New_appearance_forgets_a_stale_pointer()
+    {
+        var loop = Start("Sam");
+        Advance(1000);
+        loop.SlideInFinished();
+        Advance(4000);
+        Assert.Empty(Last);
+        loop.PointerEntered(); // reported by a popup that was already sliding out
+
+        AdvanceTo(15, 9, 15, 1);
+        Assert.Equal(new[] { "Sam" }, Last);
+        loop.SlideInFinished();
+        Advance(4000);
+        Assert.Empty(Last);
+    }
 }

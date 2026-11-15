@@ -151,6 +151,24 @@ public class FanfareTests : IDisposable
         Assert.Equal(new byte[] { 7, 7 }, File.ReadAllBytes(copy));
     }
 
+    // Final review I1: MCI keeps the last played file open, so it must be closed before the copy is replaced.
+    [Fact]
+    public void Import_stops_playback_before_replacing_the_copy()
+    {
+        var fanfare = Create();
+        var source = Path.Combine(_dir.Path, "source");
+        Directory.CreateDirectory(source);
+        File.WriteAllBytes(Path.Combine(source, "a.wav"), [1]);
+        File.WriteAllBytes(Path.Combine(source, "b.mp3"), [2]);
+        fanfare.Import(Path.Combine(source, "a.wav"));
+        bool oldCopyStillThereAtStop = false;
+        _player.OnStop = () => oldCopyStillThereAtStop = File.Exists(Path.Combine(fanfare.SoundsDirectory, "a.wav"));
+
+        fanfare.Import(Path.Combine(source, "b.mp3"));
+
+        Assert.True(oldCopyStillThereAtStop);
+    }
+
     [Fact]
     public void Stop_stops_the_player()
     {

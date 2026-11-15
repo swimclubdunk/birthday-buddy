@@ -12,7 +12,7 @@ public class CelebrationPresenterTests
 {
     static readonly DateOnly Today = D(2026, 11, 15);
 
-    sealed record Context(CelebrationPresenter Presenter, Library Library, FakeTimeProvider Time, Rectangle WorkingArea, Func<int> Opened);
+    sealed record Context(CelebrationPresenter Presenter, Library Library, FakeTimeProvider Time, Rectangle WorkingArea, Func<int> Opened, CelebrationLoop Loop);
 
     static void Run(Action<Context> test, int workingHeight, params string[] names) => Sta.Run(() =>
     {
@@ -29,7 +29,7 @@ public class CelebrationPresenterTests
             new FakeFanfare(), time, new InlineSynchronizationContext());
         using var presenter = new CelebrationPresenter(loop, library, () => Today, () => opened++, time, () => (bounds, workingArea, 1f));
         loop.Start();
-        test(new Context(presenter, library, time, workingArea, () => opened));
+        test(new Context(presenter, library, time, workingArea, () => opened, loop));
     });
 
     static void Raise(Control control, string method) =>
@@ -114,6 +114,39 @@ public class CelebrationPresenterTests
         Assert.Equal(2, c.Presenter.Popups.Count);
 
         Raise(first, "OnMouseLeave");
+        c.Time.Advance(CelebrationLoop.VisibleFor);
+        Assert.Empty(c.Presenter.Popups);
+    }, 1040, "Sam", "Alex");
+
+    // Final review M1: an appearance that slides in no new person popup must still retract.
+    [Fact]
+    public void Stack_retracts_when_only_the_more_popup_is_new() => Run(c =>
+    {
+        c.Time.Advance(TimeSpan.FromSeconds(1));
+        FinishAll(c.Presenter.Popups);
+        c.Library.Upsert(P(15, 11, name: "Cleo"));
+        c.Loop.Recheck();
+        Assert.Null(c.Presenter.Popups[^1].PersonId); // "+2 more" is the only new popup
+        FinishAll(c.Presenter.Popups);
+
+        c.Time.Advance(CelebrationLoop.VisibleFor);
+        Assert.Empty(c.Presenter.Popups);
+    }, 400, "Alex", "Bo");
+
+    // Final review M2: a popup sliding out under the pointer must not leave the stack held for good.
+    [Fact]
+    public void Pointer_entering_a_leaving_popup_does_not_hold_later_appearances() => Run(c =>
+    {
+        c.Time.Advance(TimeSpan.FromSeconds(1));
+        var first = c.Presenter.Popups.ToList();
+        FinishAll(first);
+        c.Time.Advance(CelebrationLoop.VisibleFor); // retract starts: popups are sliding out
+        Raise(first[0], "OnMouseEnter");
+        FinishAll(first);
+
+        c.Time.Advance(CelebrationLoop.RepeatEvery - CelebrationLoop.VisibleFor);
+        Assert.Equal(2, c.Presenter.Popups.Count);
+        FinishAll(c.Presenter.Popups);
         c.Time.Advance(CelebrationLoop.VisibleFor);
         Assert.Empty(c.Presenter.Popups);
     }, 1040, "Sam", "Alex");

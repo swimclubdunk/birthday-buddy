@@ -68,7 +68,14 @@ internal sealed class FakePlayer : IFanfarePlayer
         return Succeeds(path);
     }
 
-    public void Stop() => Stops++;
+    /// <summary>Runs inside Stop, e.g. to check what was on disk at that moment.</summary>
+    public Action? OnStop { get; set; }
+
+    public void Stop()
+    {
+        Stops++;
+        OnStop?.Invoke();
+    }
 }
 
 internal sealed class FakePresence : IUserPresence

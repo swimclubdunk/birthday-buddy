@@ -84,6 +84,11 @@ public sealed class CelebrationPresenter : IDisposable
                 _more = CelebrationPopup.ForMore(plan.MoreCount, _time);
                 Hook(_more);
                 _more.MoreClicked += (_, _) => _openMainWindow();
+                if (reportSlideIn)
+                {
+                    _more.SlideInFinished += (_, _) => _loop.SlideInFinished();
+                    reportSlideIn = false;
+                }
                 _more.SlideIn(moreSlot);
             }
             else
@@ -97,6 +102,9 @@ public sealed class CelebrationPresenter : IDisposable
             Leave(_more);
             _more = null;
         }
+
+        // Nothing new slid in (a restack): the stack is already up, so the 4-second countdown can start now.
+        if (reportSlideIn && stack.Count > 0) _loop.SlideInFinished();
     }
 
     void OnAcknowledged(object? sender, EventArgs e)
@@ -110,6 +118,7 @@ public sealed class CelebrationPresenter : IDisposable
     {
         popup.PointerEntered += (_, _) =>
         {
+            if (!_people.Contains(popup) && _more != popup) return; // already leaving: it can't hold the stack
             if (_pointerInside.Add(popup) && _pointerInside.Count == 1) _loop.PointerEntered();
         };
         popup.PointerLeft += (_, _) => ForgetPointer(popup);

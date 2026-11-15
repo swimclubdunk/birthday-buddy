@@ -106,6 +106,7 @@ public sealed class CelebrationLoop(
 
         foreach (var c in current) _announced.Add(c.PersonId);
         Cancel(_retract);
+        _pointerInside = false; // a new stack; the presenter reports the pointer afresh
         Visible = current;
         StackChanged?.Invoke(this, Visible);
         fanfare.Play();

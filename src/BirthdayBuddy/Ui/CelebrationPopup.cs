@@ -201,7 +201,7 @@ public sealed class CelebrationPopup : Form
     {
         control.MouseEnter += (_, _) =>
         {
-            if (_pointerInside) return;
+            if (_pointerInside || _leaving) return; // a popup on its way out no longer holds the stack
             _pointerInside = true;
             PointerEntered?.Invoke(this, EventArgs.Empty);
         };

@@ -73,6 +73,7 @@ public sealed class Fanfare(IFanfarePlayer player, string dataDirectory, Func<Se
         var folder = Path.GetFullPath(SoundsDirectory);
         if (string.Equals(Path.GetDirectoryName(source), folder, StringComparison.OrdinalIgnoreCase)) return name;
 
+        player.Stop(); // MCI keeps the last played file open, which would block deleting it
         Directory.CreateDirectory(folder);
         foreach (var old in Directory.GetFiles(folder)) File.Delete(old);
         File.Copy(source, Path.Combine(folder, name));
