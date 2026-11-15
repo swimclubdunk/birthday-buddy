@@ -3,7 +3,10 @@
 A tiny Windows tray app that reminds you of birthdays.
 
 - Add people with a name and birthday (year optional).
-- Get a Windows notification on the day, plus a heads-up a few days before (you choose how many; 0 turns it off).
+- On the day, a celebration popup with a fanfare appears in the bottom-right corner. It comes back every 15 minutes until you click **Okay I got it!**
+- The popup waits while you're in full screen, presenting, locked, or away from the keyboard (you choose how many idle minutes count as away; 0 turns that check off).
+- Set the fanfare's volume, or choose your own WAV or MP3.
+- Get a Windows notification a few days before (you choose how many; 0 turns it off).
 - Starts quietly with Windows and lives in the system tray. Left-click the cake to open it.
 
 ## Build
@@ -18,4 +21,6 @@ Produces `dist/BirthdayBuddy.exe` — a single file that runs on any 64-bit Wind
     dotnet run --project src/BirthdayBuddy
 
 Data lives in `%AppData%\BirthdayBuddy\birthdays.json`; errors are logged to `log.txt` next to it.
+A chosen fanfare is copied to `%AppData%\BirthdayBuddy\sounds\`.
 To redraw the icon: `dotnet run --project tools/IconGen -- src/BirthdayBuddy/app.ico`.
+To regenerate the bundled fanfare: `dotnet run --project tools/SoundGen -- src/BirthdayBuddy/fanfare.wav`.
