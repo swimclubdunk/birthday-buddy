@@ -110,4 +110,27 @@ public class WordingTests
     [Fact]
     public void Tooltip_never_exceeds_127_chars() =>
         Assert.True(Wording.Tooltip(Enumerable.Repeat(new string('x', 60), 5)).Length <= Wording.MaxTooltip);
+
+    [Fact]
+    public void Acknowledge_button() => Assert.Equal("Okay I got it!", Wording.AcknowledgeButton);
+
+    [Fact]
+    public void Default_fanfare() => Assert.Equal("Default fanfare", Wording.DefaultFanfare);
+
+    [Fact]
+    public void Celebration_headline() => Assert.Equal("It's Sam's birthday!", Wording.CelebrationHeadline("Sam"));
+
+    [Fact]
+    public void Celebration_age()
+    {
+        Assert.Equal("Turns 34", Wording.CelebrationAge(34));
+        Assert.Null(Wording.CelebrationAge(null));
+    }
+
+    [Fact]
+    public void More_birthdays()
+    {
+        Assert.Equal("+1 more birthday today", Wording.MoreBirthdays(1));
+        Assert.Equal("+3 more birthdays today", Wording.MoreBirthdays(3));
+    }
 }
