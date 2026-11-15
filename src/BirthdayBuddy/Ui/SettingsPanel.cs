@@ -13,6 +13,7 @@ public sealed class SettingsPanel : UserControl
 
     readonly NumericUpDown _headsUp = new() { Minimum = 0, Maximum = Settings.MaxHeadsUpDays, Width = 52, Font = Theme.Body, BorderStyle = BorderStyle.FixedSingle, TextAlign = HorizontalAlignment.Center, Margin = new Padding(0, 2, 0, 0) };
     readonly NumericUpDown _idle = new() { Minimum = 0, Maximum = Settings.MaxIdleMinutes, Width = 52, Font = Theme.Body, BorderStyle = BorderStyle.FixedSingle, TextAlign = HorizontalAlignment.Center, Margin = new Padding(0, 2, 0, 0) };
+    readonly NumericUpDown _popup = new() { Minimum = Settings.MinPopupSeconds, Maximum = Settings.MaxPopupSeconds, Width = 52, Font = Theme.Body, BorderStyle = BorderStyle.FixedSingle, TextAlign = HorizontalAlignment.Center, Margin = new Padding(0, 2, 0, 0) };
     readonly TrackBar _volume = new() { Minimum = 0, Maximum = 10, SmallChange = 1, LargeChange = 1, TickFrequency = 1, TickStyle = TickStyle.None, AutoSize = false, Width = 150, Height = 26, Margin = new Padding(0, 2, 0, 0) };
     readonly Label _volumeValue = Widgets.Label();
     readonly Label _soundName = new() { AutoSize = false, AutoEllipsis = true, Width = 190, Height = 22, Font = Theme.Body, UseMnemonic = false, Margin = new Padding(0, 6, 0, 0) };
@@ -24,6 +25,7 @@ public sealed class SettingsPanel : UserControl
     readonly Label _note = Widgets.Label(role: Role.Error, font: Theme.Small);
     readonly Debouncer _headsUpCommit;
     readonly Debouncer _idleCommit;
+    readonly Debouncer _popupCommit;
     readonly Debouncer _volumeCommit;
     bool _syncing;
 
@@ -41,6 +43,7 @@ public sealed class SettingsPanel : UserControl
         var context = SynchronizationContext.Current ?? new WindowsFormsSynchronizationContext();
         _headsUpCommit = new Debouncer(TimeSpan.FromMilliseconds(800), CommitHeadsUp, time, context);
         _idleCommit = new Debouncer(TimeSpan.FromMilliseconds(800), CommitIdle, time, context);
+        _popupCommit = new Debouncer(TimeSpan.FromMilliseconds(800), CommitPopup, time, context);
         _volumeCommit = new Debouncer(TimeSpan.FromMilliseconds(800), CommitVolume, time, context);
 
         var heading = Widgets.Label("Settings", font: Theme.Heading);
@@ -59,6 +62,13 @@ public sealed class SettingsPanel : UserControl
         minLabel.Margin = new Padding(6, 5, 0, 0);
         var idle = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 6, 0, 0) };
         idle.Controls.AddRange([idleLabel, _idle, minLabel]);
+
+        var popupLabel = Widgets.Label("Show popup for");
+        popupLabel.Margin = new Padding(0, 5, 6, 0);
+        var secondsLabel = Widgets.Label("seconds");
+        secondsLabel.Margin = new Padding(6, 5, 0, 0);
+        var popup = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 6, 0, 0) };
+        popup.Controls.AddRange([popupLabel, _popup, secondsLabel]);
 
         var volumeLabel = Widgets.Label("Fanfare volume");
         volumeLabel.Margin = new Padding(0, 5, 6, 0);
@@ -82,7 +92,7 @@ public sealed class SettingsPanel : UserControl
         _note.Margin = new Padding(0, 4, 0, 0);
 
         var layout = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, Padding = new Padding(20, 4, 20, 8) };
-        layout.Controls.AddRange([heading, remind, idle, volume, sound, soundButtons, _startup, _showDataFile, _note]);
+        layout.Controls.AddRange([heading, remind, idle, popup, volume, sound, soundButtons, _startup, _showDataFile, _note]);
         Controls.Add(layout);
 
         _headsUp.ValueChanged += (_, _) =>
@@ -92,6 +102,10 @@ public sealed class SettingsPanel : UserControl
         _idle.ValueChanged += (_, _) =>
         {
             if (!_syncing) _idleCommit.Trigger();
+        };
+        _popup.ValueChanged += (_, _) =>
+        {
+            if (!_syncing) _popupCommit.Trigger();
         };
         _volume.ValueChanged += (_, _) =>
         {
@@ -113,6 +127,8 @@ public sealed class SettingsPanel : UserControl
             _headsUp.Value = Math.Clamp(_library.Data.Settings.HeadsUpDays, 0, Settings.MaxHeadsUpDays);
         if (!_idleCommit.Pending)
             _idle.Value = Math.Clamp(_library.Data.Settings.IdleMinutes, 0, Settings.MaxIdleMinutes);
+        if (!_popupCommit.Pending)
+            _popup.Value = Math.Clamp(_library.Data.Settings.PopupSeconds, Settings.MinPopupSeconds, Settings.MaxPopupSeconds);
         if (!_volumeCommit.Pending)
             _volume.Value = (int)Math.Round(Settings.SnapVolume(_library.Data.Settings.FanfareVolume) * 10);
         _volumeValue.Text = VolumeText(_volume.Value / 10.0);
@@ -127,6 +143,7 @@ public sealed class SettingsPanel : UserControl
     {
         _headsUpCommit.Flush();
         _idleCommit.Flush();
+        _popupCommit.Flush();
         _volumeCommit.Flush();
     }
 
@@ -142,6 +159,13 @@ public sealed class SettingsPanel : UserControl
         int minutes = (int)_idle.Value;
         if (minutes != _library.Data.Settings.IdleMinutes)
             _library.UpdateSettings(_library.Data.Settings with { IdleMinutes = minutes });
+    }
+
+    void CommitPopup()
+    {
+        int seconds = (int)_popup.Value;
+        if (seconds != _library.Data.Settings.PopupSeconds)
+            _library.UpdateSettings(_library.Data.Settings with { PopupSeconds = seconds });
     }
 
     void CommitVolume()
@@ -199,6 +223,7 @@ public sealed class SettingsPanel : UserControl
             Flush();
             _headsUpCommit.Dispose();
             _idleCommit.Dispose();
+            _popupCommit.Dispose();
             _volumeCommit.Dispose();
         }
         base.Dispose(disposing);

@@ -25,12 +25,14 @@ public class CelebrationPresenterTests
         var workingArea = bounds with { Height = workingHeight };
         int opened = 0;
 
-        using var loop = new CelebrationLoop(() => CelebrationPlanner.Due(library.Data.People, Today), new FakePresence(), () => 5,
+        using var loop = new CelebrationLoop(() => CelebrationPlanner.Due(library.Data.People, Today), new FakePresence(), () => 5, () => (int)VisibleFor.TotalSeconds,
             new FakeFanfare(), time, new InlineSynchronizationContext());
         using var presenter = new CelebrationPresenter(loop, library, () => Today, () => opened++, time, () => (bounds, workingArea, 1f));
         loop.Start();
         test(new Context(presenter, library, time, workingArea, () => opened, loop));
     });
+
+    static readonly TimeSpan VisibleFor = TimeSpan.FromSeconds(4);
 
     static void Raise(Control control, string method) =>
         typeof(Control).GetMethod(method, BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(control, [EventArgs.Empty]);
@@ -96,7 +98,7 @@ public class CelebrationPresenterTests
         c.Time.Advance(TimeSpan.FromSeconds(1));
         var popups = c.Presenter.Popups.ToList();
         FinishAll(popups);
-        c.Time.Advance(CelebrationLoop.VisibleFor);
+        c.Time.Advance(VisibleFor);
         Assert.Empty(c.Presenter.Popups);
         FinishAll(popups);
         Assert.All(popups, p => Assert.True(p.IsDisposed));
@@ -114,7 +116,7 @@ public class CelebrationPresenterTests
         Assert.Equal(2, c.Presenter.Popups.Count);
 
         Raise(first, "OnMouseLeave");
-        c.Time.Advance(CelebrationLoop.VisibleFor);
+        c.Time.Advance(VisibleFor);
         Assert.Empty(c.Presenter.Popups);
     }, 1040, "Sam", "Alex");
 
@@ -129,7 +131,7 @@ public class CelebrationPresenterTests
         Assert.Null(c.Presenter.Popups[^1].PersonId); // "+2 more" is the only new popup
         FinishAll(c.Presenter.Popups);
 
-        c.Time.Advance(CelebrationLoop.VisibleFor);
+        c.Time.Advance(VisibleFor);
         Assert.Empty(c.Presenter.Popups);
     }, 400, "Alex", "Bo");
 
@@ -140,14 +142,14 @@ public class CelebrationPresenterTests
         c.Time.Advance(TimeSpan.FromSeconds(1));
         var first = c.Presenter.Popups.ToList();
         FinishAll(first);
-        c.Time.Advance(CelebrationLoop.VisibleFor); // retract starts: popups are sliding out
+        c.Time.Advance(VisibleFor); // retract starts: popups are sliding out
         Raise(first[0], "OnMouseEnter");
         FinishAll(first);
 
-        c.Time.Advance(CelebrationLoop.RepeatEvery - CelebrationLoop.VisibleFor);
+        c.Time.Advance(CelebrationLoop.RepeatEvery - VisibleFor);
         Assert.Equal(2, c.Presenter.Popups.Count);
         FinishAll(c.Presenter.Popups);
-        c.Time.Advance(CelebrationLoop.VisibleFor);
+        c.Time.Advance(VisibleFor);
         Assert.Empty(c.Presenter.Popups);
     }, 1040, "Sam", "Alex");
 }

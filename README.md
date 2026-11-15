@@ -3,7 +3,7 @@
 A tiny Windows tray app that reminds you of birthdays.
 
 - Add people with a name and birthday (year optional).
-- On the day, a celebration popup with a fanfare appears in the bottom-right corner. It comes back every 15 minutes until you click **Okay I got it!**
+- On the day, a celebration popup with a fanfare appears in the bottom-right corner for 10 seconds (you can change this in the settings). It comes back every 15 minutes until you click **Okay I got it!**
 - The popup waits while you're in full screen, presenting, locked, or away from the keyboard (you choose how many idle minutes count as away; 0 turns that check off).
 - Set the fanfare's volume, or choose your own WAV or MP3.
 - Get a Windows notification a few days before (you choose how many; 0 turns it off).

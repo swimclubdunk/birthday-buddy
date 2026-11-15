@@ -35,7 +35,10 @@ public class MainWindowTests
         test(window, library, time, player);
     });
 
-    static NumericUpDown IdleSpinner(Control root) => All<NumericUpDown>(root).Single(n => n.Maximum == Settings.MaxIdleMinutes);
+    static NumericUpDown SpinnerAfter(Control root, string label) =>
+        All<NumericUpDown>(root).Single(n => n.Parent!.Controls.OfType<Label>().Any(l => l.Text == label));
+
+    static NumericUpDown IdleSpinner(Control root) => SpinnerAfter(root, "Pause when idle for");
 
     static TrackBar VolumeSlider(Control root) => All<TrackBar>(root).Single();
 
@@ -61,7 +64,23 @@ public class MainWindowTests
         var row = IdleSpinner(window).Parent!;
         var labels = row.Controls.OfType<Label>().Select(l => l.Text).ToList();
         Assert.Equal(new[] { "Pause when idle for", "min" }, labels);
-        Assert.Equal(0, IdleSpinner(window).Minimum);
+        Assert.Equal((0, Settings.MaxIdleMinutes), (IdleSpinner(window).Minimum, IdleSpinner(window).Maximum));
+    });
+
+    static NumericUpDown PopupSpinner(Control root) => SpinnerAfter(root, "Show popup for");
+
+    [Fact]
+    public void Popup_row_reads_Show_popup_for_N_seconds_and_commits_once_it_settles() => InWindowWithSound((window, library, time, _) =>
+    {
+        var spinner = PopupSpinner(window);
+        Assert.Equal(new[] { "Show popup for", "seconds" }, spinner.Parent!.Controls.OfType<Label>().Select(l => l.Text));
+        Assert.Equal((Settings.MinPopupSeconds, Settings.MaxPopupSeconds, 10m), (spinner.Minimum, spinner.Maximum, spinner.Value));
+
+        spinner.Value = 25;
+        Settle(time, 799);
+        Assert.Equal(10, library.Data.Settings.PopupSeconds);
+        Settle(time, 1);
+        Assert.Equal(25, library.Data.Settings.PopupSeconds);
     });
 
     [Fact]

@@ -18,6 +18,7 @@ public class SettingsTests
     {
         var settings = new Settings();
         Assert.Equal(5, settings.IdleMinutes);
+        Assert.Equal(10, settings.PopupSeconds);
         Assert.Equal(1.0, settings.FanfareVolume);
         Assert.Null(settings.FanfareSound);
     }

@@ -99,6 +99,7 @@ public sealed class BirthdayStore(string directoryPath)
             {
                 HeadsUpDays = Math.Clamp(settings.HeadsUpDays, 0, Settings.MaxHeadsUpDays),
                 IdleMinutes = Math.Clamp(settings.IdleMinutes, 0, Settings.MaxIdleMinutes),
+                PopupSeconds = Math.Clamp(settings.PopupSeconds, Settings.MinPopupSeconds, Settings.MaxPopupSeconds),
                 FanfareVolume = Settings.SnapVolume(settings.FanfareVolume),
                 FanfareSound = IsPlainFileName(settings.FanfareSound) ? settings.FanfareSound : null,
             },

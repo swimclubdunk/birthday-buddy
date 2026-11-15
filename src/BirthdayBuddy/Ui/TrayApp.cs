@@ -64,7 +64,8 @@ public sealed class TrayApp : ApplicationContext
         // Birthday popups: 1 s after start in both launch modes; they don't depend on the tray area being ready.
         _fanfare = new Fanfare(new MciFanfarePlayer(), BirthdayStore.DefaultDirectory, () => _library.Data.Settings);
         _celebrations = new CelebrationLoop(() => CelebrationPlanner.Due(_library.Data.People, _reminders.Today),
-            new UserPresence(), () => _library.Data.Settings.IdleMinutes, _fanfare, TimeProvider.System, SynchronizationContext.Current!);
+            new UserPresence(), () => _library.Data.Settings.IdleMinutes,
+            () => _library.Data.Settings.PopupSeconds, _fanfare, TimeProvider.System, SynchronizationContext.Current!);
         _presenter = new CelebrationPresenter(_celebrations, _library, () => _reminders.Today, ShowWindow, TimeProvider.System);
         _reminders.Checked += (_, _) => _celebrations.Recheck();
         _celebrations.Start();

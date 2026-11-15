@@ -141,8 +141,19 @@ public class BirthdayStoreTests : IDisposable
         File.WriteAllText(Store().FilePath, """{"version":1,"settings":{"headsUpDays":3,"startWithWindows":true},"people":[]}""");
         var settings = Store().Load().Data.Settings;
         Assert.Equal(5, settings.IdleMinutes);
+        Assert.Equal(10, settings.PopupSeconds);
         Assert.Equal(1.0, settings.FanfareVolume);
         Assert.Null(settings.FanfareSound);
+    }
+
+    [Theory]
+    [InlineData(1, 3)]
+    [InlineData(10, 10)]
+    [InlineData(600, 60)]
+    public void Sanitize_clamps_popup_seconds(int seconds, int expected)
+    {
+        Store().Save(new AppData { Settings = new Settings { PopupSeconds = seconds } });
+        Assert.Equal(expected, Store().Load().Data.Settings.PopupSeconds);
     }
 
     [Theory]
