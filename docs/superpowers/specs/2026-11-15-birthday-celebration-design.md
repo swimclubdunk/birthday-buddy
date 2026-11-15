@@ -129,7 +129,7 @@ The app also checks how long ago the last keyboard or mouse input was (`GetLastI
 - For example: 320×135 px on 1920×1080 at 100%; 320×128 px on 1366×768 at 100%; 480×192 px on 2560×1440 at 150%.
 - The first popup sits at the bottom-right of the primary screen's working area (above the taskbar), 12 px × display scale from both edges. Further popups stack upward, 8 px × display scale apart.
 - Stack order, bottom to top: the existing order of `BirthdayCalendar.Upcoming` (by name, case-insensitive, current culture).
-- When the working area can't hold all popups, the topmost slot shows a "+N more birthdays today" popup instead, where N is the number of due people not shown. That popup has no **Okay I got it!** button; clicking it opens the main window. Acknowledging a shown popup frees a slot for the next due person at the next appearance.
+- When the working area can't hold all popups, the topmost slot shows a "+N more birthdays today" popup instead, where N is the number of due people not shown. That popup has no **Okay I got it!** button; clicking it opens the main window. Acknowledging a shown popup frees its slot; while the stack is on screen, the next due person not shown moves into that slot right away, without a fanfare.
 
 ### Window behaviour
 
