@@ -70,3 +70,23 @@ internal sealed class FakePlayer : IFanfarePlayer
 
     public void Stop() => Stops++;
 }
+
+internal sealed class FakePresence : IUserPresence
+{
+    public Presence Result { get; set; } = Presence.Show;
+    public int? LastIdleMinutes { get; private set; }
+
+    public Presence Check(int idleMinutes)
+    {
+        LastIdleMinutes = idleMinutes;
+        return Result;
+    }
+}
+
+internal sealed class FakeFanfare : IFanfare
+{
+    public int Plays { get; private set; }
+    public int Stops { get; private set; }
+    public void Play() => Plays++;
+    public void Stop() => Stops++;
+}
