@@ -26,9 +26,8 @@ public class ReminderServiceTests : IDisposable
         service.CheckNow();
         service.CheckNow();
 
-        Assert.Equal(2, Assert.Single(_sent).Count);
+        Assert.Equal("Alex", Assert.Single(Assert.Single(_sent)).Name);
         var saved = new BirthdayStore(_dir.Path).Load().Data.People;
-        Assert.Equal(D(2026, 10, 22), saved.Single(p => p.Name == "Sam").LastBirthdayNotice);
         Assert.Equal(D(2026, 10, 24), saved.Single(p => p.Name == "Alex").LastHeadsUp);
     }
 
@@ -40,16 +39,14 @@ public class ReminderServiceTests : IDisposable
     }
 
     [Fact]
-    public void Heads_up_then_the_birthday_itself_on_the_day()
+    public void Heads_up_fires_but_the_day_itself_sends_no_toast()
     {
         var service = Create(P(24, 10));
         service.CheckNow();
         _clock.Now = new DateTimeOffset(2026, 10, 24, 9, 0, 0, TimeSpan.Zero);
         service.CheckNow();
 
-        Assert.Equal(2, _sent.Count);
-        Assert.Equal(ReminderKind.HeadsUp, Assert.Single(_sent[0]).Kind);
-        Assert.Equal(ReminderKind.Birthday, Assert.Single(_sent[1]).Kind);
+        Assert.Equal(ReminderKind.HeadsUp, Assert.Single(Assert.Single(_sent)).Kind);
     }
 
     [Theory]
@@ -66,7 +63,7 @@ public class ReminderServiceTests : IDisposable
     public void Start_checks_immediately_by_default() => Sta.Run(() =>
     {
         SynchronizationContext.SetSynchronizationContext(new System.Windows.Forms.WindowsFormsSynchronizationContext());
-        using var service = Create(P(22, 10));
+        using var service = Create(P(24, 10));
         service.Start();
         Assert.Single(_sent);
     });
@@ -76,9 +73,9 @@ public class ReminderServiceTests : IDisposable
     public void Start_with_an_initial_delay_does_not_check_yet() => Sta.Run(() =>
     {
         SynchronizationContext.SetSynchronizationContext(new System.Windows.Forms.WindowsFormsSynchronizationContext());
-        using var service = Create(P(22, 10));
+        using var service = Create(P(24, 10));
         service.Start(TimeSpan.FromSeconds(15));
         Assert.Empty(_sent);
-        Assert.Null(new BirthdayStore(_dir.Path).Load().Data.People.SingleOrDefault()?.LastBirthdayNotice);
+        Assert.Null(new BirthdayStore(_dir.Path).Load().Data.People.SingleOrDefault()?.LastHeadsUp);
     });
 }

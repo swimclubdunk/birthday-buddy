@@ -54,3 +54,46 @@ internal static class Sta
         if (error is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw();
     }
 }
+
+/// <summary>Records what would have been played; answers TryPlay with <see cref="Succeeds"/>.</summary>
+internal sealed class FakePlayer : IFanfarePlayer
+{
+    public List<(string Path, double Volume)> Played { get; } = [];
+    public int Stops { get; private set; }
+    public Func<string, bool> Succeeds { get; set; } = _ => true;
+
+    public bool TryPlay(string path, double volume)
+    {
+        Played.Add((path, volume));
+        return Succeeds(path);
+    }
+
+    /// <summary>Runs inside Stop, e.g. to check what was on disk at that moment.</summary>
+    public Action? OnStop { get; set; }
+
+    public void Stop()
+    {
+        Stops++;
+        OnStop?.Invoke();
+    }
+}
+
+internal sealed class FakePresence : IUserPresence
+{
+    public Presence Result { get; set; } = Presence.Show;
+    public int? LastIdleMinutes { get; private set; }
+
+    public Presence Check(int idleMinutes)
+    {
+        LastIdleMinutes = idleMinutes;
+        return Result;
+    }
+}
+
+internal sealed class FakeFanfare : IFanfare
+{
+    public int Plays { get; private set; }
+    public int Stops { get; private set; }
+    public void Play() => Plays++;
+    public void Stop() => Stops++;
+}

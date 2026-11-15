@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="app.ico" LogicalName="BirthdayBuddy.app.ico" />
+    <EmbeddedResource Include="fanfare.wav" LogicalName="BirthdayBuddy.fanfare.wav" />
   </ItemGroup>
 
 </Project>

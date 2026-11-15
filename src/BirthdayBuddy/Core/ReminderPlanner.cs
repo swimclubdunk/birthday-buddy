@@ -15,15 +15,8 @@ public static class ReminderPlanner
             int days = next.DayNumber - today.DayNumber;
             var result = person;
 
-            if (days == 0)
-            {
-                if (person.LastBirthdayNotice != today)
-                {
-                    reminders.Add(new Reminder(ReminderKind.Birthday, person.Name, next, 0, BirthdayCalendar.AgeOn(person, next)));
-                    result = person with { LastBirthdayNotice = today };
-                }
-            }
-            else if (days <= window && person.LastHeadsUp != next)
+            // The day itself belongs to the celebration popup (CelebrationPlanner), not to a toast.
+            if (days > 0 && days <= window && person.LastHeadsUp != next)
             {
                 reminders.Add(new Reminder(ReminderKind.HeadsUp, person.Name, next, days, BirthdayCalendar.AgeOn(person, next)));
                 result = person with { LastHeadsUp = next };

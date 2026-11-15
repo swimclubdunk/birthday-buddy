@@ -80,6 +80,10 @@ public sealed class BirthdayStore(string directoryPath)
         File.Move(temp, FilePath, overwrite: true);
     }
 
+    /// <summary>A bare file name: no folder, no drive, nothing that could point outside the sounds folder.</summary>
+    static bool IsPlainFileName(string? name) =>
+        !string.IsNullOrWhiteSpace(name) && !name.Contains('/') && Path.GetFileName(name) == name && name is not ("." or "..");
+
     /// <summary>Survives hand edits: drops people that can't be scheduled, clamps settings, fills nulls.</summary>
     static AppData Sanitize(AppData data)
     {
@@ -91,7 +95,13 @@ public sealed class BirthdayStore(string directoryPath)
 
         return data with
         {
-            Settings = settings with { HeadsUpDays = Math.Clamp(settings.HeadsUpDays, 0, Settings.MaxHeadsUpDays) },
+            Settings = settings with
+            {
+                HeadsUpDays = Math.Clamp(settings.HeadsUpDays, 0, Settings.MaxHeadsUpDays),
+                IdleMinutes = Math.Clamp(settings.IdleMinutes, 0, Settings.MaxIdleMinutes),
+                FanfareVolume = Settings.SnapVolume(settings.FanfareVolume),
+                FanfareSound = IsPlainFileName(settings.FanfareSound) ? settings.FanfareSound : null,
+            },
             People = people,
         };
     }

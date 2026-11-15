@@ -78,4 +78,28 @@ public class LibraryTests : IDisposable
         Assert.Single(library.Data.People);
         Assert.False(File.Exists(Store().FilePath));
     }
+
+    [Fact]
+    public void Acknowledge_saves_the_marker_without_raising_Changed()
+    {
+        var sam = P(15, 11);
+        var jo = P(15, 11, name: "Jo");
+        var (library, changes) = Create(new AppData { People = [sam, jo] });
+
+        library.Acknowledge(sam.Id, D(2026, 11, 15));
+
+        var saved = Store().Load().Data.People;
+        Assert.Equal(D(2026, 11, 15), saved.Single(p => p.Id == sam.Id).LastBirthdayAck);
+        Assert.Null(saved.Single(p => p.Id == jo.Id).LastBirthdayAck);
+        Assert.Equal(0, changes());
+    }
+
+    [Fact]
+    public void Acknowledge_of_an_unknown_id_changes_nothing()
+    {
+        var sam = P(15, 11);
+        var (library, _) = Create(new AppData { People = [sam] });
+        library.Acknowledge(Guid.NewGuid(), D(2026, 11, 15));
+        Assert.Equal(new[] { sam }, library.Data.People);
+    }
 }

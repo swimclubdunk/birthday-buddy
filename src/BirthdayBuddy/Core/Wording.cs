@@ -76,6 +76,17 @@ public static class Wording
         return Truncate(text, MaxTooltip);
     }
 
+    public const string AcknowledgeButton = "Okay I got it!";
+    public const string DefaultFanfare = "Default fanfare";
+    public const string SoundImportFailed = "Couldn't use that sound file. Details are in log.txt.";
+
+    public static string CelebrationHeadline(string name) => $"It's {name}'s birthday!";
+
+    public static string? CelebrationAge(int? age) => age is int a ? $"Turns {a}" : null;
+
+    public static string MoreBirthdays(int count) =>
+        count == 1 ? "+1 more birthday today" : $"+{count} more birthdays today";
+
     static string When(int days) => days == 1 ? "tomorrow" : $"in {days} days";
 
     static string Truncate(string text, int max) => text.Length <= max ? text : text[..(max - 1)] + "…";
