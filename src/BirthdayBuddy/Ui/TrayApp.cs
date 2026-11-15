@@ -12,6 +12,9 @@ public sealed class TrayApp : ApplicationContext
     readonly Notifier _notifier;
     readonly ReminderService _reminders;
     readonly StartupRegistration _startup = new();
+    readonly Fanfare _fanfare;
+    readonly CelebrationLoop _celebrations;
+    readonly CelebrationPresenter _presenter;
     MainWindow? _window;
 
     static string ExePath => Environment.ProcessPath ?? Application.ExecutablePath;
@@ -55,6 +58,14 @@ public sealed class TrayApp : ApplicationContext
         // while its "sent" marker is still saved.
         _reminders.Start(startInTray ? TimeSpan.FromSeconds(15) : TimeSpan.Zero);
         RefreshTooltip();
+
+        // Birthday popups: 1 s after start in both launch modes; they don't depend on the tray area being ready.
+        _fanfare = new Fanfare(new MciFanfarePlayer(), BirthdayStore.DefaultDirectory, () => _library.Data.Settings);
+        _celebrations = new CelebrationLoop(() => CelebrationPlanner.Due(_library.Data.People, _reminders.Today),
+            new UserPresence(), () => _library.Data.Settings.IdleMinutes, _fanfare, TimeProvider.System, SynchronizationContext.Current!);
+        _presenter = new CelebrationPresenter(_celebrations, _library, () => _reminders.Today, ShowWindow, TimeProvider.System);
+        _reminders.Checked += (_, _) => _celebrations.Recheck();
+        _celebrations.Start();
 
         if (loaded.RecoveredFrom is not null)
             _notifier.ShowMessage("Birthday Buddy",
@@ -141,6 +152,9 @@ public sealed class TrayApp : ApplicationContext
 
     protected override void ExitThreadCore()
     {
+        _presenter.Dispose();
+        _celebrations.Dispose();
+        _fanfare.Stop();
         _reminders.Dispose();
         _tray.Visible = false;
         _tray.Dispose();
