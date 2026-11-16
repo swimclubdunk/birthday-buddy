@@ -5,13 +5,13 @@ namespace BirthdayBuddy.Core;
 /// is acknowledged. Waits while <see cref="IUserPresence"/> says so and shows the moment it clears.
 /// Raises <see cref="StackChanged"/> with who should be on screen; drawing is the presenter's job.
 /// </summary>
+/// <param name="popupSeconds">How long a stack stays up once it has slid in; read each time the countdown starts.</param>
 /// <param name="context">Where timer callbacks run (the UI thread in the app).</param>
 public sealed class CelebrationLoop(
-    Func<IReadOnlyList<Celebration>> due, IUserPresence presence, Func<int> idleMinutes,
+    Func<IReadOnlyList<Celebration>> due, IUserPresence presence, Func<int> idleMinutes, Func<int> popupSeconds,
     IFanfare fanfare, TimeProvider time, SynchronizationContext context) : IDisposable
 {
     public static readonly TimeSpan StartupDelay = TimeSpan.FromSeconds(1);
-    public static readonly TimeSpan VisibleFor = TimeSpan.FromSeconds(4);
     public static readonly TimeSpan RepeatEvery = TimeSpan.FromMinutes(15);
     public static readonly TimeSpan PauseRecheck = TimeSpan.FromSeconds(5);
     public static readonly TimeSpan MaxFanfare = TimeSpan.FromSeconds(30);
@@ -28,6 +28,8 @@ public sealed class CelebrationLoop(
     public event EventHandler<IReadOnlyList<Celebration>>? StackChanged;
 
     public IReadOnlyList<Celebration> Visible { get; private set; } = [];
+
+    TimeSpan VisibleFor => TimeSpan.FromSeconds(popupSeconds());
 
     DateOnly Today => DateOnly.FromDateTime(time.GetLocalNow().DateTime);
 

@@ -12,6 +12,7 @@ public class CelebrationLoopTests : IDisposable
     readonly FakeFanfare _fanfare = new();
     readonly List<string[]> _stacks = [];
     int _idle = 5;
+    int _popupSeconds = 4;
     CelebrationLoop _loop = null!;
 
     public CelebrationLoopTests() => _clock.SetLocalTimeZone(TimeZoneInfo.Utc);
@@ -25,7 +26,7 @@ public class CelebrationLoopTests : IDisposable
     CelebrationLoop Start(params string[] names)
     {
         foreach (var name in names) Add(name);
-        _loop = new CelebrationLoop(() => CelebrationPlanner.Due(_people, Today), _presence, () => _idle, _fanfare,
+        _loop = new CelebrationLoop(() => CelebrationPlanner.Due(_people, Today), _presence, () => _idle, () => _popupSeconds, _fanfare,
             _clock, new InlineSynchronizationContext());
         _loop.StackChanged += (_, stack) => _stacks.Add(stack.Select(c => c.Name).ToArray());
         _loop.Start();
@@ -87,6 +88,35 @@ public class CelebrationLoopTests : IDisposable
         Advance(1000);
         loop.SlideInFinished();
         Advance(3999);
+        Assert.Single(_stacks);
+        Advance(1);
+        Assert.Empty(Last);
+    }
+
+    [Fact]
+    public void Stack_stays_up_for_the_configured_seconds()
+    {
+        _popupSeconds = 10;
+        var loop = Start("Sam");
+        Advance(1000);
+        loop.SlideInFinished();
+        Advance(9999);
+        Assert.Single(_stacks);
+        Advance(1);
+        Assert.Empty(Last);
+    }
+
+    [Fact]
+    public void A_changed_popup_time_applies_from_the_next_countdown()
+    {
+        _popupSeconds = 10;
+        var loop = Start("Sam");
+        Advance(1000);
+        loop.SlideInFinished();
+        loop.PointerEntered();
+        _popupSeconds = 7;
+        loop.PointerLeft();
+        Advance(6999);
         Assert.Single(_stacks);
         Advance(1);
         Assert.Empty(Last);
